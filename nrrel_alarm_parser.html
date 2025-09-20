@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NRREL ALARM PARSER</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#f6f8fb;--card:#ffffff;--muted:#6b7280;--accent:#0f62ff}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;margin:0;background:var(--bg);color:#0b1220}
+    .wrap{max-width:980px;margin:36px auto;padding:20px}
+    .card{background:var(--card);border-radius:12px;box-shadow:0 6px 18px rgba(11,17,32,0.06);padding:20px}
+    h1{margin:0 0 6px;font-size:18px}
+    p.lead{margin:0 0 14px;color:var(--muted);font-size:13px}
+    .row{display:flex;gap:12px;align-items:center}
+    input[type=file]{display:block}
+    .controls{display:flex;gap:8px;margin-top:12px}
+    button{background:var(--accent);color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+    button.ghost{background:#eef2ff;color:var(--accent);border:1px solid rgba(15,98,255,0.08)}
+    .preview{margin-top:18px;overflow:auto;border-radius:8px}
+    table{border-collapse:collapse;width:100%;font-size:13px}
+    th,td{padding:8px 10px;border-bottom:1px solid #eef2f8;text-align:left}
+    th{background:#fbfdff;position:sticky;top:0}
+    .small{font-size:12px;color:var(--muted)}
+    .footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>NRREL ALARM PARSER (NR-PCI)</h1>
+	  <br/>
+      <p class="lead" style="margin-top:6px">Please upload a CSV</p>
+
+      <div class="row">
+        <div style="flex:1">          
+          <input id="csvfile" type="file" accept=".csv" />
+		  <br/>		  
+          <div class="small" style="margin-top:6px">Input columns: I (DN), Q (Name), AL (Origin Alarm Time), Y (Supplementary Information), W (Diagnostic Info)</div>
+		  <div class="small" style="margin-top:6px">Output columns: MRBTS, NRBTS, NRCELL, Name, Origin Alarm Time, Supplementary Information, NR-PCI, COUNT.</div>
+        </div>
+	  <br/>		
+        <div style="width:220px">
+          <label class="small">Output filename</label>
+          <input id="outname" value="nrrel-alarm-parsed.xlsx" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e6eefb;margin-top:6px" />
+        </div>
+      </div>
+	  <br/>
+      <div class="controls">
+        <button id="processBtn" disabled>Process & Preview</button>
+        <button id="downloadBtn" class="ghost" disabled>Download Excel</button>
+        <button id="clearBtn" class="ghost">Clear</button>
+      </div>
+
+      <div id="status" class="small" style="margin-top:8px;color:var(--muted)"></div>
+
+      <div class="preview card" id="previewArea" style="display:none;margin-top:12px;padding:0">
+        <table id="previewTable"><thead></thead><tbody></tbody></table>
+      </div>
+	  <br/>
+      <div class="footer">
+        <div class="small"></div>
+        
+      </div>
+    </div>
+  </div>
+
+<script>
+function colLetterToIndex(letter){
+  letter = (letter||'').toUpperCase().trim();
+  let idx = 0;
+  for(let i=0;i<letter.length;i++) idx = idx*26 + (letter.charCodeAt(i) - 64);
+  return idx - 1;
+}
+
+// fixed mapping based on your spec
+const config = {
+  DN: colLetterToIndex('I'),
+  Name: colLetterToIndex('Q'),
+  OriginAlarmTime: colLetterToIndex('AL'),
+  Supplementary: colLetterToIndex('Y'),
+  Diagnostic: colLetterToIndex('W')
+};
+
+const OUT_HEADER = ['MRBTS','NRBTS','NRCELL','Name','Origin Alarm Time','Supplementary Information','NR-PCI','COUNT'];
+
+const csvInput = document.getElementById('csvfile');
+const processBtn = document.getElementById('processBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const clearBtn = document.getElementById('clearBtn');
+const status = document.getElementById('status');
+const previewArea = document.getElementById('previewArea');
+const previewTable = document.getElementById('previewTable');
+const outnameInput = document.getElementById('outname');
+
+let parsedRows = null; // data rows only
+let expandedRows = null; // array of arrays with header first
+
+csvInput.addEventListener('change', ()=>{ processBtn.disabled = !csvInput.files.length; status.textContent = csvInput.files.length ? csvInput.files[0].name : ''; });
+clearBtn.addEventListener('click', ()=>{ csvInput.value = ''; processBtn.disabled = true; downloadBtn.disabled = true; previewArea.style.display = 'none'; status.textContent = ''; parsedRows = null; expandedRows = null; });
+
+processBtn.addEventListener('click', ()=>{
+  if(!csvInput.files.length) return;
+  status.textContent = 'Parsing CSV...';
+  const file = csvInput.files[0];
+
+  Papa.parse(file, {
+    skipEmptyLines: true,
+    complete: function(results){
+      if(!results || !results.data || !results.data.length){ status.textContent = 'Empty or invalid CSV'; return; }
+      // detect header row: if first row contains non-numeric text in the DN/Name columns, treat as header and skip it
+      let data = results.data.slice();
+      const first = data[0];
+      const maybeHeader = (cell)=> typeof cell === 'string' && cell.trim().length>0 && /[A-Za-z]/.test(cell);
+      if(maybeHeader(first[config.DN]) || maybeHeader(first[config.Name])) data.shift();
+      parsedRows = data;
+      status.textContent = `Parsed ${parsedRows.length} data rows. Expanding...`;
+      expandedRows = buildOutput(parsedRows);
+      status.textContent = `Expanded to ${expandedRows.length-1} rows.`;
+      renderPreview(expandedRows);
+      downloadBtn.disabled = false;
+    },
+    error: function(err){ status.textContent = 'CSV parse error: '+ err; }
+  });
+});
+
+function buildOutput(rows){
+  const out = [];
+  out.push(OUT_HEADER.slice());
+  for(const r of rows){
+    const dn = safeGet(r, config.DN);
+    const name = safeGet(r, config.Name);
+    const oat = safeGet(r, config.OriginAlarmTime);
+    const supp = safeGet(r, config.Supplementary);
+    const diag = safeGet(r, config.Diagnostic);
+
+    const {mrbt, nrbts, nrcell} = parseDN(dn);
+    const pairs = parseDiagnosticForPciCount(diag);
+
+    if(pairs.length === 0){
+      out.push([mrbt,nrbts,nrcell,name,oat,supp,'','']);
+    } else {
+      for(const p of pairs) out.push([mrbt,nrbts,nrcell,name,oat,supp,p.pci,p.count]);
+    }
+  }
+  return out;
+}
+
+function safeGet(arr, idx){ if(!arr) return ''; if(idx<0) return ''; return (arr[idx]===undefined||arr[idx]===null)?'':String(arr[idx]).trim(); }
+
+function parseDN(dn){
+  const res = {mrbt:'', nrbts:'', nrcell:''};
+  if(!dn) return res;
+  const m1 = dn.match(/MRBTS-([0-9]+)/i); if(m1) res.mrbt = m1[1];
+  const m2 = dn.match(/NRBTS-([0-9]+)/i); if(m2) res.nrbts = m2[1];
+  const m3 = dn.match(/NRCELL-([0-9]+)/i); if(m3) res.nrcell = m3[1];
+  return res;
+}
+
+function parseDiagnosticForPciCount(text){
+  const out = [];
+  if(!text) return out;
+  const re = /NR-?PCI\s*=?\s*(\d+)\D+?COUNT\s*=?\s*(\d+)/ig;
+  let m;
+  while((m = re.exec(text)) !== null) out.push({pci:m[1],count:m[2]});
+  return out;
+}
+
+function renderPreview(expanded){
+  previewArea.style.display = '';
+  const thead = previewTable.querySelector('thead');
+  const tbody = previewTable.querySelector('tbody');
+  thead.innerHTML = '';
+  tbody.innerHTML = '';
+  if(!expanded || !expanded.length) return;
+  const headerRow = expanded[0];
+  const trh = document.createElement('tr');
+  headerRow.forEach(h=>{ const th = document.createElement('th'); th.textContent = h || ''; trh.appendChild(th); });
+  thead.appendChild(trh);
+  const maxPreview = 200;
+  const renderCount = Math.min(expanded.length-1, maxPreview);
+  for(let i=1;i<=renderCount;i++){
+    const r = expanded[i];
+    const tr = document.createElement('tr');
+    for(let c=0;c<headerRow.length;c++){ const td = document.createElement('td'); td.textContent = r[c]||''; tr.appendChild(td); }
+    tbody.appendChild(tr);
+  }
+  if(expanded.length-1 > renderCount){ const tr = document.createElement('tr'); const td = document.createElement('td'); td.colSpan = headerRow.length; td.className='small'; td.textContent = `Preview limited to ${maxPreview} rows. Total ${expanded.length-1} rows.`; tr.appendChild(td); tbody.appendChild(tr); }
+}
+
+// Download using SheetJS
+downloadBtn.addEventListener('click', ()=>{
+  if(!expandedRows) return;
+  status.textContent = 'Building workbook...';
+  const ws = XLSX.utils.aoa_to_sheet(expandedRows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'expanded');
+  const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+  const blob = new Blob([wbout], {type:'application/octet-stream'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = (outnameInput.value || 'nrrel-alarm-parsed.xlsx'); document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  status.textContent = 'Download started.';
+});
+
+</script>
+</body>
+</html>
