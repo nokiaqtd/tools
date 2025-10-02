@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NRREL Relation Mapping</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#f6f8fb;--card:#ffffff;--muted:#6b7280;--accent:#0f62ff}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;margin:0;background:var(--bg);color:#0b1220}
+    .wrap{max-width:980px;margin:36px auto;padding:20px}
+    .card{background:var(--card);border-radius:12px;box-shadow:0 6px 18px rgba(11,17,32,0.06);padding:20px}
+    h1{margin:0 0 6px;font-size:18px}
+    p.lead{margin:0 0 14px;color:var(--muted);font-size:13px}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    input[type=file]{display:block}
+    .controls{display:flex;gap:8px;margin-top:12px}
+    button{background:var(--accent);color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+    button.ghost{background:#eef2ff;color:var(--accent);border:1px solid rgba(15,98,255,0.08)}
+    .small{font-size:12px;color:var(--muted)}
+    .footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+    .file-item{margin-top:6px}
+    label.small{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    .file-block{background:#fbfdff;border-radius:8px;padding:10px;border:1px solid #eef6ff}
+    #logArea{white-space:pre-wrap; background:#0b1220;color:#e6eefb;padding:10px;border-radius:8px;margin-top:12px;max-height:320px;overflow:auto;font-family:monospace;font-size:12px}
+    /* warnings area */
+    #warningsBlock{margin-top:10px; font-family:monospace; white-space:pre-wrap; background:#fff7f0; border-radius:8px; padding:8px; border:1px solid #ffd8b5; color:#7a3b00; font-size:12px; max-height:300px; overflow:auto;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>NRREL Relation Mapping</h1>
+      <p class="lead" style="margin-top:6px">Please upload three CSV files (required): <strong>nrrel_alarms.csv</strong>, <strong>nrcel.csv</strong>, <strong>xymrbts.csv</strong></p>
+
+      <div class="row">
+        <div style="flex:1;min-width:320px">
+          <div class="file-block">
+            <div class="file-item">
+              <label class="small">1) nrrel_alarms.csv</label>
+              <input id="fileAlarms" type="file" accept=".csv" />
+            </div>
+            <div class="file-item">
+              <label class="small">2) nrcel.csv</label>
+              <input id="fileNrcel" type="file" accept=".csv" />
+            </div>
+            <div class="file-item">
+              <label class="small">3) xymrbts.csv</label>
+              <input id="fileXymrbts" type="file" accept=".csv" />
+            </div>
+          </div>
+
+          <div id="notes" class="small" style="margin-top:10px">
+            Notes: csv filename is flexible but all input mandatory
+          </div>
+
+          <!-- warnings area will be injected here after processing -->
+          <div id="warningsArea"></div>
+        </div>
+
+        <div style="width:260px">
+          <label class="small">Output filename</label>
+          <input id="outname" value="nrrel-mapping.csv" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e6eefb;margin-top:6px" />
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="processBtn" disabled>Process</button>
+        <button id="downloadBtn" class="ghost" disabled>Download CSV</button>
+      </div>
+
+      <div id="status" class="small" style="margin-top:8px;color:var(--muted)"></div>
+
+      <!-- log area kept -->
+      <div id="logArea" style="display:none"></div>
+
+      <div class="footer">
+        <div class="small">Required: all three files must be chosen to enable processing and download.</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/*
+  Modified in-browser version:
+  - previewTable removed (no preview)
+  - logArea kept
+  - After processing, notes replaced with "Warnings: N" and a full listing of warning rows below it
+*/
+
+const fileAlarms = document.getElementById('fileAlarms');
+const fileNrcel = document.getElementById('fileNrcel');
+const fileXymrbts = document.getElementById('fileXymrbts');
+const processBtn = document.getElementById('processBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const status = document.getElementById('status');
+const outnameInput = document.getElementById('outname');
+const logArea = document.getElementById('logArea');
+const notesEl = document.getElementById('notes');
+const warningsArea = document.getElementById('warningsArea');
+
+let logs = [];
+let warningsCount = 0;
+let outputCsvContent = '';
+let lastResultSummary = null;
+
+function allSelected(){ return fileAlarms.files.length && fileNrcel.files.length && fileXymrbts.files.length; }
+
+fileAlarms.addEventListener('change', ()=>{ processBtn.disabled = !allSelected(); status.textContent = fileAlarms.files.length ? `Selected: ${fileAlarms.files[0].name}` : ''; });
+fileNrcel.addEventListener('change', ()=>{ processBtn.disabled = !allSelected(); status.textContent = fileNrcel.files.length ? `Selected: ${fileNrcel.files[0].name}` : ''; });
+fileXymrbts.addEventListener('change', ()=>{ processBtn.disabled = !allSelected(); status.textContent = fileXymrbts.files.length ? `Selected: ${fileXymrbts.files[0].name}` : ''; });
+
+function pushLog(msg){
+  const ts = (new Date()).toISOString();
+  const full = `${ts} ${msg}`;
+  logs.push(full);
+  if (/Warning|WARN/i.test(msg)) warningsCount++;
+  // update log display
+  logArea.style.display = '';
+  logArea.textContent = logs.join('\n');
+  // also keep status trimmed for user
+  const last = msg.split('\n')[0];
+  status.textContent = last;
+}
+
+function resetLogs(){
+  logs = [];
+  warningsCount = 0;
+  logArea.textContent = '';
+  logArea.style.display = 'none';
+  warningsArea.innerHTML = '';
+  notesEl.textContent = 'Notes: csv filename is flexible but all input mandatory';
+}
+
+function readFileAsText(file){
+  return new Promise((resolve,reject)=>{
+    const fr = new FileReader();
+    fr.onload = ()=> resolve(fr.result);
+    fr.onerror = ()=> reject(new Error('Failed reading file: ' + file.name));
+    fr.readAsText(file);
+  });
+}
+
+// CSV line parser (handles quotes and doubled quotes)
+function parseCSVLine(line){
+  const out = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      out.push(cur);
+      cur = '';
+    } else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+function splitLines(text){
+  return text.split(/\r\n|\n/);
+}
+
+function haversineMeters(lat1, lon1, lat2, lon2) {
+  const toRad = deg => (deg * Math.PI) / 180;
+  const R = 6371000;
+  const φ1 = toRad(lat1);
+  const φ2 = toRad(lat2);
+  const Δφ = toRad(lat2 - lat1);
+  const Δλ = toRad(lon2 - lon1);
+  const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function extractMrbtsFromDn(dn){
+  if (!dn || typeof dn !== 'string') return null;
+  const marker = 'PLMN-PLMN/MRBTS-';
+  const idx = dn.indexOf(marker);
+  if (idx !== -1) {
+    const start = idx + marker.length;
+    const rest = dn.slice(start);
+    const slashIdx = rest.indexOf('/');
+    const mrbts = slashIdx === -1 ? rest : rest.slice(0, slashIdx);
+    if (/^\d+$/.test(mrbts)) return mrbts;
+  }
+  const m = dn.match(/(\d{3,})/);
+  return m ? m[1] : null;
+}
+
+function escapeCsv(val) {
+  if (val === null || val === undefined) return '';
+  const s = String(val);
+  if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+async function loadXymrbtsFromText(text){
+  pushLog('Loading xymrbts CSV (in-browser)...');
+  const lines = splitLines(text);
+  const xymrbtsmap = new Map();
+  let lineNo = 0;
+  let stored = 0;
+  for (const line of lines){
+    lineNo++;
+    if (!line || line.trim() === '') continue;
+    let cols;
+    try { cols = parseCSVLine(line); } catch(e) { pushLog(`Warning: parse error at xymrbts line ${lineNo}. Skipping.`); continue; }
+    if (cols.length < 3) { pushLog(`Warning: xymrbts line ${lineNo} has <3 cols. Skipping.`); continue; }
+    const lonRaw = cols[0].trim(), latRaw = cols[1].trim(), mrbtsRaw = cols[2].trim();
+    if (lineNo === 1) {
+      if (Number.isNaN(Number(lonRaw)) || Number.isNaN(Number(latRaw))) {
+        pushLog('Detected header row in xymrbts.csv — skipping first line.'); continue;
+      }
+    }
+    const lon = Number(lonRaw), lat = Number(latRaw), mrbts = mrbtsRaw;
+    if (Number.isNaN(lon) || Number.isNaN(lat) || !mrbts) {
+      pushLog(`Warning: invalid xymrbts data at line ${lineNo}. Skipping.`);
+      continue;
+    }
+    xymrbtsmap.set(String(mrbts), { lon, lat });
+    stored++; if (stored % 50000 === 0) pushLog(`Stored ${stored} xymrbts records...`);
+  }
+  pushLog(`Finished reading xymrbts.csv. lines=${lineNo} stored=${stored}`);
+  return xymrbtsmap;
+}
+
+async function loadNrcelFromText(text){
+  pushLog('Loading nrcel CSV with exact column indices (AL=37, AR=43)...');
+  const lines = splitLines(text);
+  const pci_dn_map = new Map();
+  let lineNo = 0;
+  let storedCount = 0;
+  const INDEX_AL = 37; // $dn
+  const INDEX_AR = 43; // physCellId
+  for (const line of lines){
+    lineNo++;
+    if (!line || line.trim() === '') continue;
+    if (lineNo === 2) { pushLog('Detected header at row 2 — skipping it (we use exact indices).'); continue; }
+    if (lineNo < 3) continue;
+    let cols;
+    try { cols = parseCSVLine(line); } catch (e) { pushLog(`Warning: parse error at nrcel line ${lineNo}. Skipping.`); continue; }
+    if (cols.length <= Math.max(INDEX_AL, INDEX_AR)) {
+      pushLog(`Warning: nrcel line ${lineNo} has only ${cols.length} cols but expected >= ${Math.max(INDEX_AL, INDEX_AR) + 1}. Skipping.`);
+      continue;
+    }
+    const dnRaw = (cols[INDEX_AL] || '').trim();
+    const physRaw = (cols[INDEX_AR] || '').trim();
+    if (!physRaw) continue;
+    if (!dnRaw) { pushLog(`Warning: missing dn at nrcel line ${lineNo} for physCellId=${physRaw}. Skipping.`); continue; }
+    const physKey = String(physRaw);
+    const set = pci_dn_map.get(physKey) || new Set();
+    set.add(dnRaw);
+    pci_dn_map.set(physKey, set);
+    storedCount++;
+    if (storedCount % 50000 === 0) pushLog(`Stored ${storedCount} nrcel rows so far... (line ${lineNo})`);
+  }
+  pushLog(`Finished reading nrcel.csv. lines=${lineNo} storedRows=${storedCount} distinct_physCellIds=${pci_dn_map.size}`);
+  return pci_dn_map;
+}
+
+async function processNrrelAlarmsFromText(text, xymrbtsmap, pci_dn_map){
+  pushLog('Loading nrrel_alarms CSV (header row 1, data from row 2)...');
+  const lines = splitLines(text);
+  let lineNo = 0;
+  let processedRows = 0;
+  let outputRows = 0;
+  const INDEX_SOURCE_DN = 8; // column 9  (zero-based)
+  const INDEX_INFO = 22;     // column 23 (zero-based)
+  const outRows = [];
+  outRows.push('source_dn,physCellId,target_dn,distance_m'); // header
+
+  for (const line of lines){
+    lineNo++;
+    if (!line) continue;
+    if (lineNo === 1) { pushLog('Detected header row at nrrel_alarms.csv row 1. Skipping header.'); continue; }
+    let cols;
+    try { cols = parseCSVLine(line); } catch (e) { pushLog(`Warning: parse error at nrrel_alarms line ${lineNo}. Skipping.`); continue; }
+    if (cols.length <= Math.max(INDEX_SOURCE_DN, INDEX_INFO)) {
+      pushLog(`Warning: nrrel_alarms line ${lineNo} has only ${cols.length} cols but expected >= ${Math.max(INDEX_SOURCE_DN, INDEX_INFO) + 1}. Skipping.`);
+      continue;
+    }
+    const source_dn = (cols[INDEX_SOURCE_DN] || '').trim();
+    const info = (cols[INDEX_INFO] || '').trim();
+    if (!source_dn) {
+      pushLog(`Warning: missing source_dn at nrrel_alarms line ${lineNo}. Skipping row.`);
+      continue;
+    }
+    // extract PCI numbers from info
+    const pciMatches = [];
+    const regex = /NR-PCI\s*=\s*(\d+)\s*COUNT/gi;
+    let m;
+    while ((m = regex.exec(info)) !== null) { pciMatches.push(m[1]); }
+    if (pciMatches.length === 0) {
+      pushLog(`Info: no PCI found in nrrel_alarms line ${lineNo} for source_dn='${source_dn}'. Skipping row.`);
+      processedRows++;
+      continue;
+    }
+    const source_mrbts = extractMrbtsFromDn(source_dn);
+    if (!source_mrbts) {
+      pushLog(`WARN: cannot extract mrbts from source_dn='${source_dn}' (nrrel_alarms line ${lineNo}). Skipping row.`);
+      processedRows++;
+      continue;
+    }
+    const sourceCoord = xymrbtsmap.get(String(source_mrbts));
+    if (!sourceCoord) {
+      pushLog(`WARN: source mrbts='${source_mrbts}' for source_dn='${source_dn}' not found in xymrbtsmap. Skipping row.`);
+      processedRows++;
+      continue;
+    }
+    for (const pci of pciMatches){
+      const physKey = String(pci);
+      const candidateSet = pci_dn_map.get(physKey);
+      if (!candidateSet || candidateSet.size === 0) {
+        pushLog(`WARN: no target_dn found in pci_dn_map for physCellId=${physKey} (source_dn='${source_dn}'). Writing blank result.`);
+        outRows.push(`${escapeCsv(source_dn)},${escapeCsv(physKey)},,`);
+        outputRows++;
+        continue;
+      }
+      let nearest = null;
+      for (const target_dn of candidateSet){
+        const target_mrbts = extractMrbtsFromDn(target_dn);
+        if (!target_mrbts) { pushLog(`WARN: cannot extract mrbts from target_dn='${target_dn}'. Skipping comparison.`); continue; }
+        const targetCoord = xymrbtsmap.get(String(target_mrbts));
+        if (!targetCoord) { pushLog(`WARN: target mrbts='${target_mrbts}' (from ${target_dn}) not found in xymrbtsmap. Skipping comparison.`); continue; }
+        const d = haversineMeters(sourceCoord.lat, sourceCoord.lon, targetCoord.lat, targetCoord.lon);
+        pushLog(`COMPARE: pci=${physKey} source_dn='${source_dn}' target_dn='${target_dn}' target_mrbts=${target_mrbts} distance_m=${d.toFixed(3)} m`);
+        if (!nearest || d < nearest.distance_m) nearest = { target_dn, distance_m: d };
+      }
+      if (!nearest) {
+        pushLog(`WARN: no valid target coordinates for physCellId=${physKey} (source_dn='${source_dn}'). Writing blank result.`);
+        outRows.push(`${escapeCsv(source_dn)},${escapeCsv(physKey)},,`);
+        outputRows++;
+      } else {
+        outRows.push(`${escapeCsv(source_dn)},${escapeCsv(physKey)},${escapeCsv(nearest.target_dn)},${nearest.distance_m.toFixed(3)}`);
+        outputRows++;
+        pushLog(`NEAREST: pci=${physKey} source_dn='${source_dn}' nearest_target_dn='${nearest.target_dn}' distance_m=${nearest.distance_m.toFixed(3)} m`);
+      }
+    }
+    processedRows++;
+    if (processedRows % 10000 === 0) pushLog(`Processed ${processedRows} nrrel_alarms rows so far...`);
+    if (processedRows % 1000 === 0) await new Promise(r => setTimeout(r, 0));
+  }
+  pushLog(`Finished processing nrrel_alarms. lines=${lineNo} processedRows=${processedRows} outputRows=${outputRows}`);
+  return { outCsv: outRows.join('\r\n'), processedRows, outputRows };
+}
+
+function collectWarningLines(){
+  // returns the log lines that are warnings (case-insensitive)
+  return logs.filter(l => /Warning|WARN/i.test(l));
+}
+
+async function runProcessing(){
+  resetLogs();
+  processBtn.disabled = true;
+  downloadBtn.disabled = true;
+  status.textContent = 'Starting processing...';
+  try {
+    const fileX = fileXymrbts.files[0];
+    const fileN = fileNrcel.files[0];
+    const fileA = fileAlarms.files[0];
+    if (!fileX || !fileN || !fileA) { pushLog('ERROR: All three files must be selected.'); processBtn.disabled = false; return; }
+
+    pushLog(`Starting processing. Files: ${fileA.name} | ${fileN.name} | ${fileX.name}`);
+
+    // read xymrbts
+    status.textContent = 'Reading xymrbts.csv ...';
+    const txtX = await readFileAsText(fileX);
+    const xymrbtsmap = await loadXymrbtsFromText(txtX);
+    pushLog(`xymrbtsmap size: ${xymrbtsmap.size}`);
+
+    // read nrcel
+    status.textContent = 'Reading nrcel.csv ...';
+    const txtN = await readFileAsText(fileN);
+    const pci_dn_map = await loadNrcelFromText(txtN);
+    pushLog(`pci_dn_map size (distinct physCellId): ${pci_dn_map.size}`);
+
+    // read nrrel_alarms and process
+    status.textContent = 'Reading nrrel_alarms.csv and processing ...';
+    const txtA = await readFileAsText(fileA);
+    const result = await processNrrelAlarmsFromText(txtA, xymrbtsmap, pci_dn_map);
+    outputCsvContent = result.outCsv;
+    lastResultSummary = result;
+    //pushLog('Processing summary: ' + JSON.stringify(result));
+
+    status.textContent = `Processing finished. rows processed=${result.processedRows} outputRows=${result.outputRows}`;
+    downloadBtn.disabled = false;
+
+    // replace notes with warnings count AND show full warning rows
+    const warningLines = collectWarningLines();
+    notesEl.textContent = `Warnings: ${warningLines.length}`;
+    if (warningLines.length > 0) {
+      // show details in warningsArea
+      const wg = document.createElement('div');
+      wg.id = 'warningsBlock';
+      // join lines with newline, keep them readable
+      wg.textContent = warningLines.join('\n');
+      warningsArea.innerHTML = '';
+      warningsArea.appendChild(wg);
+      // also scroll logArea to the first warning (helpful)
+      logArea.scrollTop = logArea.scrollHeight;
+    } else {
+      warningsArea.innerHTML = '';
+    }
+
+  } catch (err) {
+    pushLog('FATAL ERROR: ' + (err && err.message ? err.message : String(err)));
+    status.textContent = 'Processing failed. See logs.';
+  } finally {
+    processBtn.disabled = false;
+  }
+}
+
+processBtn.addEventListener('click', () => {
+  runProcessing();
+});
+
+downloadBtn.addEventListener('click', () => {
+  if (!outputCsvContent) return;
+  let filename = (outnameInput.value || 'nrrel-mapping').trim();
+  if (!/\.csv$/i.test(filename)) filename = filename + '.csv';
+  const blob = new Blob([outputCsvContent], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  pushLog('CSV download started: ' + filename);
+});
+
+</script>
+</body>
+</html>
