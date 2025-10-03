@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>NRREL Relation Mapping</title>
+  <title>NRREL Mapping</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root{--bg:#f6f8fb;--card:#ffffff;--muted:#6b7280;--accent:#0f62ff}
     body{font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;margin:0;background:var(--bg);color:#0b1220}
     .wrap{max-width:980px;margin:36px auto;padding:20px}
     .card{background:var(--card);border-radius:12px;box-shadow:0 6px 18px rgba(11,17,32,0.06);padding:20px}
-    h1{margin:0 0 6px;font-size:18px}
-    p.lead{margin:0 0 14px;color:var(--muted);font-size:13px}
-    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    h2{margin:0 0 6px;font-size:18px}
+    .lead{margin:0 0 14px;color:var(--muted);font-size:13px}
+    .row{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
     input[type=file]{display:block}
     .controls{display:flex;gap:8px;margin-top:12px}
     button{background:var(--accent);color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600}
@@ -22,16 +22,17 @@
     .file-item{margin-top:6px}
     label.small{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
     .file-block{background:#fbfdff;border-radius:8px;padding:10px;border:1px solid #eef6ff}
-    #logArea{white-space:pre-wrap; background:#0b1220;color:#e6eefb;padding:10px;border-radius:8px;margin-top:12px;max-height:320px;overflow:auto;font-family:monospace;font-size:12px}
-    /* warnings area */
-    #warningsBlock{margin-top:10px; font-family:monospace; white-space:pre-wrap; background:#fff7f0; border-radius:8px; padding:8px; border:1px solid #ffd8b5; color:#7a3b00; font-size:12px; max-height:300px; overflow:auto;}
+    #logArea{white-space:pre-wrap; background:#0b1220;color:#e6eefb;padding:10px;border-radius:8px;margin-top:12px;max-height:320px;overflow:auto;font-family:monospace;font-size:12px;display:none}
+    #warningsBlock{margin-top:10px;white-space:pre-wrap;background:#fff7f0;border-radius:6px;padding:8px;border:1px solid #ffd8b5;color:#7a3b00;max-height:320px;overflow:auto;font-family:monospace}
+    /* make Download hidden initially */
+    #downloadBtn { display: none; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>NRREL Relation Mapping</h1>
-      <p class="lead" style="margin-top:6px">Please upload three CSV files (required): <strong>nrrel_alarms.csv</strong>, <strong>nrcel.csv</strong>, <strong>xymrbts.csv</strong></p>
+      <h2>NRREL Mapping</h2>
+      <p class="lead">Upload: <strong>nrrel_alarms.csv</strong>, <strong>nrcel.csv</strong>, <strong>xymrbts.csv</strong> (all required)</p>
 
       <div class="row">
         <div style="flex:1;min-width:320px">
@@ -54,388 +55,320 @@
             Notes: csv filename is flexible but all input mandatory
           </div>
 
-          <!-- warnings area will be injected here after processing -->
           <div id="warningsArea"></div>
         </div>
 
         <div style="width:260px">
           <label class="small">Output filename</label>
           <input id="outname" value="nrrel-mapping.csv" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e6eefb;margin-top:6px" />
+          <div class="controls" style="margin-top:12px">
+            <button id="processBtn" disabled>Process</button>
+            <button id="downloadBtn" class="ghost" disabled>Download CSV</button>
+          </div>
         </div>
       </div>
 
-      <div class="controls">
-        <button id="processBtn" disabled>Process</button>
-        <button id="downloadBtn" class="ghost" disabled>Download CSV</button>
-      </div>
-
       <div id="status" class="small" style="margin-top:8px;color:var(--muted)"></div>
-
-      <!-- log area kept -->
-      <div id="logArea" style="display:none"></div>
+      <div id="logArea"></div>
 
       <div class="footer">
-        <div class="small">Required: all three files must be chosen to enable processing and download.</div>
+        <div class="small"></div>
       </div>
     </div>
   </div>
 
 <script>
-/*
-  Modified in-browser version:
-  - previewTable removed (no preview)
-  - logArea kept
-  - After processing, notes replaced with "Warnings: N" and a full listing of warning rows below it
+/* Optimized & memory-safe; UI tweaks per your request.
+   - Download button hidden until fallback blob URL is available after processing.
+   - notes updated to: Warnings: N  Alarm rows processed: X  Output rows: Y
+   - Button style restored and Process label set.
 */
 
+// config (kept silent/small logs for speed)
+const LOG_COMPARE = false;
+const LOG_NEAREST_VERBOSE = false;
+const YIELD_EVERY = 10000;
+
+// elements
 const fileAlarms = document.getElementById('fileAlarms');
 const fileNrcel = document.getElementById('fileNrcel');
 const fileXymrbts = document.getElementById('fileXymrbts');
 const processBtn = document.getElementById('processBtn');
 const downloadBtn = document.getElementById('downloadBtn');
-const status = document.getElementById('status');
 const outnameInput = document.getElementById('outname');
+const statusEl = document.getElementById('status');
 const logArea = document.getElementById('logArea');
 const notesEl = document.getElementById('notes');
 const warningsArea = document.getElementById('warningsArea');
 
-let logs = [];
-let warningsCount = 0;
-let outputCsvContent = '';
-let lastResultSummary = null;
+let tailLogs = [];
+let warnings = [];
+let fallbackBlobUrl = null;
 
+// enable process when all files selected
 function allSelected(){ return fileAlarms.files.length && fileNrcel.files.length && fileXymrbts.files.length; }
+[fileAlarms,fileNrcel,fileXymrbts].forEach(el => el.addEventListener('change', ()=>{ processBtn.disabled = !allSelected(); }));
 
-fileAlarms.addEventListener('change', ()=>{ processBtn.disabled = !allSelected(); status.textContent = fileAlarms.files.length ? `Selected: ${fileAlarms.files[0].name}` : ''; });
-fileNrcel.addEventListener('change', ()=>{ processBtn.disabled = !allSelected(); status.textContent = fileNrcel.files.length ? `Selected: ${fileNrcel.files[0].name}` : ''; });
-fileXymrbts.addEventListener('change', ()=>{ processBtn.disabled = !allSelected(); status.textContent = fileXymrbts.files.length ? `Selected: ${fileXymrbts.files[0].name}` : ''; });
+function appendTail(line){
+  // minimal tail logs kept; not used heavily
+  tailLogs.push(line);
+  if (tailLogs.length > 200) tailLogs.shift();
+  logArea.style.display = tailLogs.length ? '' : 'none';
+  logArea.textContent = tailLogs.join('\n');
+  logArea.scrollTop = logArea.scrollHeight;
+}
+function logInfo(msg){ const s=(new Date()).toISOString() + ' INFO: ' + msg; appendTail(s); statusEl.textContent = msg; }
+function logWarn(msg){ const s=(new Date()).toISOString() + ' WARN: ' + msg; warnings.push(s); appendTail(s); }
+function logCompare(msg){ if (LOG_COMPARE) appendTail((new Date()).toISOString()+' COMPARE: '+msg); }
+function logNearest(msg){ if (LOG_NEAREST_VERBOSE) appendTail((new Date()).toISOString()+' NEAREST: '+msg); else appendTail((new Date()).toISOString()+' NEAREST: '+msg.split(' ')[0]); }
 
-function pushLog(msg){
-  const ts = (new Date()).toISOString();
-  const full = `${ts} ${msg}`;
-  logs.push(full);
-  if (/Warning|WARN/i.test(msg)) warningsCount++;
-  // update log display
-  logArea.style.display = '';
-  logArea.textContent = logs.join('\n');
-  // also keep status trimmed for user
-  const last = msg.split('\n')[0];
-  status.textContent = last;
+// streaming helper
+async function streamFileLines(file, onLine){
+  const reader = file.stream().getReader();
+  const decoder = new TextDecoder('utf-8');
+  let { value, done } = await reader.read();
+  let buf = '';
+  let lineNo = 0;
+  while (!done) {
+    buf += decoder.decode(value, { stream: true });
+    let parts = buf.split(/\r\n|\n/);
+    buf = parts.pop();
+    for (const p of parts){
+      lineNo++;
+      await onLine(p, lineNo);
+    }
+    ({ value, done } = await reader.read());
+  }
+  if (buf.length) { lineNo++; await onLine(buf, lineNo); }
+  reader.releaseLock();
 }
 
-function resetLogs(){
-  logs = [];
-  warningsCount = 0;
-  logArea.textContent = '';
-  logArea.style.display = 'none';
-  warningsArea.innerHTML = '';
-  notesEl.textContent = 'Notes: csv filename is flexible but all input mandatory';
-}
-
-function readFileAsText(file){
-  return new Promise((resolve,reject)=>{
-    const fr = new FileReader();
-    fr.onload = ()=> resolve(fr.result);
-    fr.onerror = ()=> reject(new Error('Failed reading file: ' + file.name));
-    fr.readAsText(file);
-  });
-}
-
-// CSV line parser (handles quotes and doubled quotes)
+// csv parse (fast split if no quotes)
 function parseCSVLine(line){
-  const out = [];
-  let cur = '';
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
-      else inQuotes = !inQuotes;
-    } else if (ch === ',' && !inQuotes) {
-      out.push(cur);
-      cur = '';
-    } else cur += ch;
+  if (!line.includes('"')) return line.split(',');
+  const out=[]; let cur='', inQ=false;
+  for (let i=0;i<line.length;i++){
+    const ch=line[i];
+    if (ch==='"'){ if (inQ && line[i+1]==='"'){ cur+='"'; i++; } else inQ=!inQ; }
+    else if (ch===',' && !inQ){ out.push(cur); cur=''; }
+    else cur+=ch;
   }
   out.push(cur);
   return out;
 }
+function escapeCsv(val){ if (val===null||val===undefined) return ''; const s=String(val); if (s.includes(',')||s.includes('"')||s.includes('\n')) return '"' + s.replace(/"/g,'""') + '"'; return s; }
 
-function splitLines(text){
-  return text.split(/\r\n|\n/);
-}
-
-function haversineMeters(lat1, lon1, lat2, lon2) {
-  const toRad = deg => (deg * Math.PI) / 180;
-  const R = 6371000;
-  const φ1 = toRad(lat1);
-  const φ2 = toRad(lat2);
-  const Δφ = toRad(lat2 - lat1);
-  const Δλ = toRad(lon2 - lon1);
-  const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
+// domain helpers
 function extractMrbtsFromDn(dn){
-  if (!dn || typeof dn !== 'string') return null;
-  const marker = 'PLMN-PLMN/MRBTS-';
+  if (!dn) return null;
+  const marker='PLMN-PLMN/MRBTS-';
   const idx = dn.indexOf(marker);
-  if (idx !== -1) {
-    const start = idx + marker.length;
-    const rest = dn.slice(start);
-    const slashIdx = rest.indexOf('/');
-    const mrbts = slashIdx === -1 ? rest : rest.slice(0, slashIdx);
-    if (/^\d+$/.test(mrbts)) return mrbts;
+  if (idx !== -1){
+    const rest = dn.slice(idx+marker.length);
+    const slash = rest.indexOf('/');
+    const m = slash===-1?rest:rest.slice(0,slash);
+    if (/^\d+$/.test(m)) return m;
   }
-  const m = dn.match(/(\d{3,})/);
-  return m ? m[1] : null;
+  const mm = dn.match(/(\d{3,})/);
+  return mm?mm[1]:null;
+}
+function extractGnbAndLcridFromDn(dn){
+  const mG = dn.match(/NRBTS-(\d+)/i);
+  const mL = dn.match(/NRCELL-(\d+)/i);
+  return { gnb:(mG && mG[1])||'', lcrid:(mL&&mL[1])||'' };
+}
+function haversineMeters(lat1, lon1, lat2, lon2){
+  const toRad = d => d*Math.PI/180;
+  const R=6371000;
+  const φ1 = toRad(lat1), φ2 = toRad(lat2);
+  const dφ = toRad(lat2-lat1), dλ = toRad(lon2-lon1);
+  const a = Math.sin(dφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-function escapeCsv(val) {
-  if (val === null || val === undefined) return '';
-  const s = String(val);
-  if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
-    return '"' + s.replace(/"/g, '""') + '"';
-  }
-  return s;
+// load xymrbts
+async function loadXymrbts(file){
+  logInfo('Loading xymrbts...');
+  const map = new Map();
+  let lines=0;
+  await streamFileLines(file, async (line, ln) => {
+    lines++;
+    if (!line.trim()) return;
+    const cols = parseCSVLine(line);
+    if (cols.length < 3) { logWarn(`xymrbts line ${ln} <3 cols`); return; }
+    const lon = Number((cols[0]||'').trim()), lat = Number((cols[1]||'').trim()), mrb = (cols[2]||'').trim();
+    if (ln===1 && (Number.isNaN(lon)||Number.isNaN(lat))) return;
+    if (Number.isNaN(lon) || Number.isNaN(lat) || !mrb) { logWarn(`invalid xymrbts at ${ln}`); return; }
+    map.set(String(mrb), {lon,lat});
+    if (lines % 50000 === 0) logInfo(`xymrbts processed ${lines}`);
+    if (lines % YIELD_EVERY === 0) await new Promise(r=>setTimeout(r,0));
+  });
+  logInfo(`Finished xymrbts: ${map.size} entries`);
+  return map;
 }
 
-async function loadXymrbtsFromText(text){
-  pushLog('Loading xymrbts CSV (in-browser)...');
-  const lines = splitLines(text);
-  const xymrbtsmap = new Map();
-  let lineNo = 0;
-  let stored = 0;
-  for (const line of lines){
-    lineNo++;
-    if (!line || line.trim() === '') continue;
-    let cols;
-    try { cols = parseCSVLine(line); } catch(e) { pushLog(`Warning: parse error at xymrbts line ${lineNo}. Skipping.`); continue; }
-    if (cols.length < 3) { pushLog(`Warning: xymrbts line ${lineNo} has <3 cols. Skipping.`); continue; }
-    const lonRaw = cols[0].trim(), latRaw = cols[1].trim(), mrbtsRaw = cols[2].trim();
-    if (lineNo === 1) {
-      if (Number.isNaN(Number(lonRaw)) || Number.isNaN(Number(latRaw))) {
-        pushLog('Detected header row in xymrbts.csv — skipping first line.'); continue;
-      }
-    }
-    const lon = Number(lonRaw), lat = Number(latRaw), mrbts = mrbtsRaw;
-    if (Number.isNaN(lon) || Number.isNaN(lat) || !mrbts) {
-      pushLog(`Warning: invalid xymrbts data at line ${lineNo}. Skipping.`);
-      continue;
-    }
-    xymrbtsmap.set(String(mrbts), { lon, lat });
-    stored++; if (stored % 50000 === 0) pushLog(`Stored ${stored} xymrbts records...`);
-  }
-  pushLog(`Finished reading xymrbts.csv. lines=${lineNo} stored=${stored}`);
-  return xymrbtsmap;
+// load nrcel and precompute candidate coords
+async function loadNrcelPrecomputed(file, xymrbtsmap){
+  logInfo('Loading nrcel and precomputing...');
+  const INDEX_AL=37, INDEX_AR=43;
+  const map = new Map();
+  let lnCount=0, stored=0;
+  await streamFileLines(file, async (line, ln) => {
+    lnCount++;
+    if (!line.trim()) return;
+    if (ln===2) return;
+    if (ln < 3) return;
+    const cols = parseCSVLine(line);
+    if (cols.length <= Math.max(INDEX_AL, INDEX_AR)) { logWarn(`nrcel line ${ln} cols=${cols.length}`); return; }
+    const dn = (cols[INDEX_AL]||'').trim();
+    const phys = (cols[INDEX_AR]||'').trim();
+    if (!phys) return;
+    if (!dn) { logWarn(`nrcel missing dn at line ${ln} phys=${phys}`); return; }
+    const mrb = extractMrbtsFromDn(dn);
+    if (!mrb) return; // skip if no mrbts
+    const coord = xymrbtsmap.get(String(mrb));
+    if (!coord) return; // skip if xymrbts has no coord
+    const { gnb, lcrid } = extractGnbAndLcridFromDn(dn);
+    const entry = { dn, lat: coord.lat, lon: coord.lon, gnb, lcrid };
+    const key = String(phys);
+    let arr = map.get(key);
+    if (!arr){ arr = []; map.set(key, arr); }
+    arr.push(entry);
+    stored++;
+    if (stored % 50000 === 0) logInfo(`nrcel candidates stored ${stored}`);
+    if (stored % YIELD_EVERY === 0) await new Promise(r => setTimeout(r,0));
+  });
+  logInfo(`Finished nrcel precompute. physCount=${map.size}`);
+  return map;
 }
 
-async function loadNrcelFromText(text){
-  pushLog('Loading nrcel CSV with exact column indices (AL=37, AR=43)...');
-  const lines = splitLines(text);
-  const pci_dn_map = new Map();
-  let lineNo = 0;
-  let storedCount = 0;
-  const INDEX_AL = 37; // $dn
-  const INDEX_AR = 43; // physCellId
-  for (const line of lines){
-    lineNo++;
-    if (!line || line.trim() === '') continue;
-    if (lineNo === 2) { pushLog('Detected header at row 2 — skipping it (we use exact indices).'); continue; }
-    if (lineNo < 3) continue;
-    let cols;
-    try { cols = parseCSVLine(line); } catch (e) { pushLog(`Warning: parse error at nrcel line ${lineNo}. Skipping.`); continue; }
-    if (cols.length <= Math.max(INDEX_AL, INDEX_AR)) {
-      pushLog(`Warning: nrcel line ${lineNo} has only ${cols.length} cols but expected >= ${Math.max(INDEX_AL, INDEX_AR) + 1}. Skipping.`);
-      continue;
+// writer
+async function createWriter(suggestedName){
+  if ('showSaveFilePicker' in window) {
+    try {
+      const handle = await window.showSaveFilePicker({ suggestedName });
+      const writable = await handle.createWritable();
+      return {
+        async write(text){ await writable.write(text); },
+        async close(){ await writable.close(); },
+        async getBlob(){ return null; }
+      };
+    } catch(e) {
+      logInfo('Save dialog cancelled; fallback to blob output');
     }
-    const dnRaw = (cols[INDEX_AL] || '').trim();
-    const physRaw = (cols[INDEX_AR] || '').trim();
-    if (!physRaw) continue;
-    if (!dnRaw) { pushLog(`Warning: missing dn at nrcel line ${lineNo} for physCellId=${physRaw}. Skipping.`); continue; }
-    const physKey = String(physRaw);
-    const set = pci_dn_map.get(physKey) || new Set();
-    set.add(dnRaw);
-    pci_dn_map.set(physKey, set);
-    storedCount++;
-    if (storedCount % 50000 === 0) pushLog(`Stored ${storedCount} nrcel rows so far... (line ${lineNo})`);
   }
-  pushLog(`Finished reading nrcel.csv. lines=${lineNo} storedRows=${storedCount} distinct_physCellIds=${pci_dn_map.size}`);
-  return pci_dn_map;
+  const parts=[];
+  return {
+    async write(text){ parts.push(text); },
+    async close(){ const blob = new Blob(parts,{type:'text/csv'}); fallbackBlobUrl = URL.createObjectURL(blob); },
+    async getBlob(){ return fallbackBlobUrl; }
+  };
 }
 
-async function processNrrelAlarmsFromText(text, xymrbtsmap, pci_dn_map){
-  pushLog('Loading nrrel_alarms CSV (header row 1, data from row 2)...');
-  const lines = splitLines(text);
-  let lineNo = 0;
-  let processedRows = 0;
-  let outputRows = 0;
-  const INDEX_SOURCE_DN = 8; // column 9  (zero-based)
-  const INDEX_INFO = 22;     // column 23 (zero-based)
-  const outRows = [];
-  outRows.push('source_dn,physCellId,target_dn,distance_m'); // header
+// main processing
+async function processAll(){
+  tailLogs = []; warnings = []; fallbackBlobUrl = null; logArea.style.display='none'; warningsArea.innerHTML=''; notesEl.textContent='Processing...';
+  processBtn.disabled = true; downloadBtn.style.display='none'; downloadBtn.disabled = true; statusEl.textContent='Starting...';
 
-  for (const line of lines){
-    lineNo++;
-    if (!line) continue;
-    if (lineNo === 1) { pushLog('Detected header row at nrrel_alarms.csv row 1. Skipping header.'); continue; }
-    let cols;
-    try { cols = parseCSVLine(line); } catch (e) { pushLog(`Warning: parse error at nrrel_alarms line ${lineNo}. Skipping.`); continue; }
-    if (cols.length <= Math.max(INDEX_SOURCE_DN, INDEX_INFO)) {
-      pushLog(`Warning: nrrel_alarms line ${lineNo} has only ${cols.length} cols but expected >= ${Math.max(INDEX_SOURCE_DN, INDEX_INFO) + 1}. Skipping.`);
-      continue;
-    }
-    const source_dn = (cols[INDEX_SOURCE_DN] || '').trim();
-    const info = (cols[INDEX_INFO] || '').trim();
-    if (!source_dn) {
-      pushLog(`Warning: missing source_dn at nrrel_alarms line ${lineNo}. Skipping row.`);
-      continue;
-    }
-    // extract PCI numbers from info
-    const pciMatches = [];
+  const fA = fileAlarms.files[0], fN = fileNrcel.files[0], fX = fileXymrbts.files[0];
+  if (!fA || !fN || !fX){ logWarn('All three files required'); processBtn.disabled=false; return; }
+
+  const writer = await createWriter((outnameInput.value || 'nrrel-mapping.csv').trim());
+  await writer.write('source_dn,physCellId,target_dn,gNB,Lcrid,distance_m\r\n');
+
+  const xymap = await loadXymrbts(fX);
+  const pciMap = await loadNrcelPrecomputed(fN, xymap);
+
+  logInfo('Processing nrrel_alarms...');
+  let lnCount=0, processed=0, outRows=0;
+  await streamFileLines(fA, async (line, ln) => {
+    lnCount++;
+    if (!line) return;
+    if (ln === 1) return;
+    const cols = parseCSVLine(line);
+    if (cols.length <= Math.max(8,22)) { logWarn(`nrrel_alarms line ${ln} cols=${cols.length}`); return; }
+    const source_dn = (cols[8]||'').trim();
+    const info = (cols[22]||'').trim();
+    if (!source_dn){ logWarn(`missing source_dn at line ${ln}`); return; }
+
+    const pciMatches=[];
     const regex = /NR-PCI\s*=\s*(\d+)\s*COUNT/gi;
     let m;
-    while ((m = regex.exec(info)) !== null) { pciMatches.push(m[1]); }
-    if (pciMatches.length === 0) {
-      pushLog(`Info: no PCI found in nrrel_alarms line ${lineNo} for source_dn='${source_dn}'. Skipping row.`);
-      processedRows++;
-      continue;
-    }
-    const source_mrbts = extractMrbtsFromDn(source_dn);
-    if (!source_mrbts) {
-      pushLog(`WARN: cannot extract mrbts from source_dn='${source_dn}' (nrrel_alarms line ${lineNo}). Skipping row.`);
-      processedRows++;
-      continue;
-    }
-    const sourceCoord = xymrbtsmap.get(String(source_mrbts));
-    if (!sourceCoord) {
-      pushLog(`WARN: source mrbts='${source_mrbts}' for source_dn='${source_dn}' not found in xymrbtsmap. Skipping row.`);
-      processedRows++;
-      continue;
-    }
+    while ((m = regex.exec(info)) !== null) pciMatches.push(m[1]);
+    if (pciMatches.length === 0){ processed++; return; }
+
+    const source_mrb = extractMrbtsFromDn(source_dn);
+    if (!source_mrb){ logWarn(`cannot extract mrbts from source_dn='${source_dn}' line ${ln}`); processed++; return; }
+    const srcCoord = xymap.get(String(source_mrb));
+    if (!srcCoord){ logWarn(`source mrbts=${source_mrb} not found for source_dn='${source_dn}'`); processed++; return; }
+
     for (const pci of pciMatches){
       const physKey = String(pci);
-      const candidateSet = pci_dn_map.get(physKey);
-      if (!candidateSet || candidateSet.size === 0) {
-        pushLog(`WARN: no target_dn found in pci_dn_map for physCellId=${physKey} (source_dn='${source_dn}'). Writing blank result.`);
-        outRows.push(`${escapeCsv(source_dn)},${escapeCsv(physKey)},,`);
-        outputRows++;
+      const candidates = pciMap.get(physKey);
+      if (!candidates || candidates.length === 0) {
+        logWarn(`no target candidate for phys=${physKey} source='${source_dn}'`);
+        await writer.write(`${escapeCsv(source_dn)},${escapeCsv(physKey)},,,,\r\n`);
+        outRows++;
         continue;
       }
       let nearest = null;
-      for (const target_dn of candidateSet){
-        const target_mrbts = extractMrbtsFromDn(target_dn);
-        if (!target_mrbts) { pushLog(`WARN: cannot extract mrbts from target_dn='${target_dn}'. Skipping comparison.`); continue; }
-        const targetCoord = xymrbtsmap.get(String(target_mrbts));
-        if (!targetCoord) { pushLog(`WARN: target mrbts='${target_mrbts}' (from ${target_dn}) not found in xymrbtsmap. Skipping comparison.`); continue; }
-        const d = haversineMeters(sourceCoord.lat, sourceCoord.lon, targetCoord.lat, targetCoord.lon);
-        pushLog(`COMPARE: pci=${physKey} source_dn='${source_dn}' target_dn='${target_dn}' target_mrbts=${target_mrbts} distance_m=${d.toFixed(3)} m`);
-        if (!nearest || d < nearest.distance_m) nearest = { target_dn, distance_m: d };
+      for (let i=0;i<candidates.length;i++){
+        const t = candidates[i];
+        const d = haversineMeters(srcCoord.lat, srcCoord.lon, t.lat, t.lon);
+        logCompare(`pci=${physKey} src='${source_dn}' tgt='${t.dn}' d=${d.toFixed(3)}`);
+        if (!nearest || d < nearest.distance_m) nearest = { target_dn: t.dn, distance_m: d, gnb: t.gnb, lcrid: t.lcrid };
       }
       if (!nearest) {
-        pushLog(`WARN: no valid target coordinates for physCellId=${physKey} (source_dn='${source_dn}'). Writing blank result.`);
-        outRows.push(`${escapeCsv(source_dn)},${escapeCsv(physKey)},,`);
-        outputRows++;
+        logWarn(`no valid coords for phys=${physKey} source='${source_dn}'`);
+        await writer.write(`${escapeCsv(source_dn)},${escapeCsv(physKey)},,,,\r\n`);
+        outRows++;
       } else {
-        outRows.push(`${escapeCsv(source_dn)},${escapeCsv(physKey)},${escapeCsv(nearest.target_dn)},${nearest.distance_m.toFixed(3)}`);
-        outputRows++;
-        pushLog(`NEAREST: pci=${physKey} source_dn='${source_dn}' nearest_target_dn='${nearest.target_dn}' distance_m=${nearest.distance_m.toFixed(3)} m`);
+        await writer.write(`${escapeCsv(source_dn)},${escapeCsv(physKey)},${escapeCsv(nearest.target_dn)},${escapeCsv(nearest.gnb)},${escapeCsv(nearest.lcrid)},${nearest.distance_m.toFixed(3)}\r\n`);
+        outRows++;
+        logNearest(`pci=${physKey} src='${source_dn}' nearest='${nearest.target_dn}' gNB=${nearest.gnb} Lcrid=${nearest.lcrid} d=${nearest.distance_m.toFixed(3)}`);
       }
     }
-    processedRows++;
-    if (processedRows % 10000 === 0) pushLog(`Processed ${processedRows} nrrel_alarms rows so far...`);
-    if (processedRows % 1000 === 0) await new Promise(r => setTimeout(r, 0));
-  }
-  pushLog(`Finished processing nrrel_alarms. lines=${lineNo} processedRows=${processedRows} outputRows=${outputRows}`);
-  return { outCsv: outRows.join('\r\n'), processedRows, outputRows };
-}
 
-function collectWarningLines(){
-  // returns the log lines that are warnings (case-insensitive)
-  return logs.filter(l => /Warning|WARN/i.test(l));
-}
+    processed++;
+    if (processed % 10000 === 0) logInfo(`Processed ${processed} nrrel rows...`);
+    if (processed % YIELD_EVERY === 0) await new Promise(r=>setTimeout(r,0));
+  });
 
-async function runProcessing(){
-  resetLogs();
-  processBtn.disabled = true;
-  downloadBtn.disabled = true;
-  status.textContent = 'Starting processing...';
-  try {
-    const fileX = fileXymrbts.files[0];
-    const fileN = fileNrcel.files[0];
-    const fileA = fileAlarms.files[0];
-    if (!fileX || !fileN || !fileA) { pushLog('ERROR: All three files must be selected.'); processBtn.disabled = false; return; }
+  await writer.close();
 
-    pushLog(`Starting processing. Files: ${fileA.name} | ${fileN.name} | ${fileX.name}`);
+  logInfo(`Finished`);
+  notesEl.textContent = `Warnings: ${warnings.length} — Alarm rows processed: ${processed} — Output rows: ${outRows}`;
+  if (warnings.length) {
+    const wg = document.createElement('div'); wg.id='warningsBlock'; wg.textContent = warnings.join('\n');
+    warningsArea.innerHTML=''; warningsArea.appendChild(wg);
+  } else warningsArea.innerHTML='';
 
-    // read xymrbts
-    status.textContent = 'Reading xymrbts.csv ...';
-    const txtX = await readFileAsText(fileX);
-    const xymrbtsmap = await loadXymrbtsFromText(txtX);
-    pushLog(`xymrbtsmap size: ${xymrbtsmap.size}`);
-
-    // read nrcel
-    status.textContent = 'Reading nrcel.csv ...';
-    const txtN = await readFileAsText(fileN);
-    const pci_dn_map = await loadNrcelFromText(txtN);
-    pushLog(`pci_dn_map size (distinct physCellId): ${pci_dn_map.size}`);
-
-    // read nrrel_alarms and process
-    status.textContent = 'Reading nrrel_alarms.csv and processing ...';
-    const txtA = await readFileAsText(fileA);
-    const result = await processNrrelAlarmsFromText(txtA, xymrbtsmap, pci_dn_map);
-    outputCsvContent = result.outCsv;
-    lastResultSummary = result;
-    //pushLog('Processing summary: ' + JSON.stringify(result));
-
-    status.textContent = `Processing finished. rows processed=${result.processedRows} outputRows=${result.outputRows}`;
+  // show download button only if fallback blob exists
+  const url = await writer.getBlob();
+  if (url) {
+    fallbackBlobUrl = url;
+    downloadBtn.style.display = 'inline-block';
     downloadBtn.disabled = false;
-
-    // replace notes with warnings count AND show full warning rows
-    const warningLines = collectWarningLines();
-    notesEl.textContent = `Warnings: ${warningLines.length}`;
-    if (warningLines.length > 0) {
-      // show details in warningsArea
-      const wg = document.createElement('div');
-      wg.id = 'warningsBlock';
-      // join lines with newline, keep them readable
-      wg.textContent = warningLines.join('\n');
-      warningsArea.innerHTML = '';
-      warningsArea.appendChild(wg);
-      // also scroll logArea to the first warning (helpful)
-      logArea.scrollTop = logArea.scrollHeight;
-    } else {
-      warningsArea.innerHTML = '';
-    }
-
-  } catch (err) {
-    pushLog('FATAL ERROR: ' + (err && err.message ? err.message : String(err)));
-    status.textContent = 'Processing failed. See logs.';
-  } finally {
-    processBtn.disabled = false;
+    downloadBtn.onclick = () => {
+      const a = document.createElement('a');
+      a.href = fallbackBlobUrl;
+      let name = (outnameInput.value||'nrrel-mapping').trim(); if (!/\.csv$/i.test(name)) name += '.csv';
+      a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    };
+  } else {
+    // file already saved via Save dialog; keep download hidden
+    downloadBtn.style.display = 'none';
+    downloadBtn.disabled = true;
   }
+
+  processBtn.disabled = false;
 }
 
-processBtn.addEventListener('click', () => {
-  runProcessing();
-});
+// attach events
+processBtn.addEventListener('click', ()=>{ processAll().catch(e=>{ logWarn('Processing error: '+(e&&e.message?e.message:String(e))); processBtn.disabled=false; }); });
 
-downloadBtn.addEventListener('click', () => {
-  if (!outputCsvContent) return;
-  let filename = (outnameInput.value || 'nrrel-mapping').trim();
-  if (!/\.csv$/i.test(filename)) filename = filename + '.csv';
-  const blob = new Blob([outputCsvContent], {type: 'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-  pushLog('CSV download started: ' + filename);
-});
-
+// initial
+logInfo('Ready. Select files to enable processing.');
 </script>
 </body>
 </html>
