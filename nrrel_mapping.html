@@ -24,7 +24,7 @@
     .file-block{background:#fbfdff;border-radius:8px;padding:10px;border:1px solid #eef6ff}
     #logArea{white-space:pre-wrap; background:#0b1220;color:#e6eefb;padding:10px;border-radius:8px;margin-top:12px;max-height:320px;overflow:auto;font-family:monospace;font-size:12px;display:none}
     #warningsBlock{margin-top:10px;white-space:pre-wrap;background:#fff7f0;border-radius:6px;padding:8px;border:1px solid #ffd8b5;color:#7a3b00;max-height:320px;overflow:auto;font-family:monospace}
-    /* make Download hidden initially */
+    /* hide download until ready */
     #downloadBtn { display: none; }
   </style>
 </head>
@@ -72,24 +72,18 @@
       <div id="logArea"></div>
 
       <div class="footer">
-        <div class="small"></div>
+        <div class="small">Required: all three files must be chosen to enable processing and download.</div>
       </div>
     </div>
   </div>
 
 <script>
-/* Optimized & memory-safe; UI tweaks per your request.
-   - Download button hidden until fallback blob URL is available after processing.
-   - notes updated to: Warnings: N  Alarm rows processed: X  Output rows: Y
-   - Button style restored and Process label set.
+/* Memory-safe fast version, but ALWAYS produce a chunked Blob so the Download button is available.
+   - createWriter now always uses chunked-mode
 */
 
-// config (kept silent/small logs for speed)
-const LOG_COMPARE = false;
-const LOG_NEAREST_VERBOSE = false;
 const YIELD_EVERY = 10000;
 
-// elements
 const fileAlarms = document.getElementById('fileAlarms');
 const fileNrcel = document.getElementById('fileNrcel');
 const fileXymrbts = document.getElementById('fileXymrbts');
@@ -105,12 +99,10 @@ let tailLogs = [];
 let warnings = [];
 let fallbackBlobUrl = null;
 
-// enable process when all files selected
 function allSelected(){ return fileAlarms.files.length && fileNrcel.files.length && fileXymrbts.files.length; }
 [fileAlarms,fileNrcel,fileXymrbts].forEach(el => el.addEventListener('change', ()=>{ processBtn.disabled = !allSelected(); }));
 
 function appendTail(line){
-  // minimal tail logs kept; not used heavily
   tailLogs.push(line);
   if (tailLogs.length > 200) tailLogs.shift();
   logArea.style.display = tailLogs.length ? '' : 'none';
@@ -119,8 +111,8 @@ function appendTail(line){
 }
 function logInfo(msg){ const s=(new Date()).toISOString() + ' INFO: ' + msg; appendTail(s); statusEl.textContent = msg; }
 function logWarn(msg){ const s=(new Date()).toISOString() + ' WARN: ' + msg; warnings.push(s); appendTail(s); }
-function logCompare(msg){ if (LOG_COMPARE) appendTail((new Date()).toISOString()+' COMPARE: '+msg); }
-function logNearest(msg){ if (LOG_NEAREST_VERBOSE) appendTail((new Date()).toISOString()+' NEAREST: '+msg); else appendTail((new Date()).toISOString()+' NEAREST: '+msg.split(' ')[0]); }
+function logCompare(msg){ /* suppressed for speed */ }
+function logNearest(msg){ /* minimal */ appendTail((new Date()).toISOString() + ' NEAREST: ' + msg.split(' ')[0]); }
 
 // streaming helper
 async function streamFileLines(file, onLine){
@@ -143,7 +135,7 @@ async function streamFileLines(file, onLine){
   reader.releaseLock();
 }
 
-// csv parse (fast split if no quotes)
+// csv parse (fast)
 function parseCSVLine(line){
   if (!line.includes('"')) return line.split(',');
   const out=[]; let cur='', inQ=false;
@@ -158,7 +150,6 @@ function parseCSVLine(line){
 }
 function escapeCsv(val){ if (val===null||val===undefined) return ''; const s=String(val); if (s.includes(',')||s.includes('"')||s.includes('\n')) return '"' + s.replace(/"/g,'""') + '"'; return s; }
 
-// domain helpers
 function extractMrbtsFromDn(dn){
   if (!dn) return null;
   const marker='PLMN-PLMN/MRBTS-';
@@ -207,7 +198,7 @@ async function loadXymrbts(file){
   return map;
 }
 
-// load nrcel and precompute candidate coords
+// load nrcel precompute
 async function loadNrcelPrecomputed(file, xymrbtsmap){
   logInfo('Loading nrcel and precomputing...');
   const INDEX_AL=37, INDEX_AR=43;
@@ -225,9 +216,9 @@ async function loadNrcelPrecomputed(file, xymrbtsmap){
     if (!phys) return;
     if (!dn) { logWarn(`nrcel missing dn at line ${ln} phys=${phys}`); return; }
     const mrb = extractMrbtsFromDn(dn);
-    if (!mrb) return; // skip if no mrbts
+    if (!mrb) return;
     const coord = xymrbtsmap.get(String(mrb));
-    if (!coord) return; // skip if xymrbts has no coord
+    if (!coord) return;
     const { gnb, lcrid } = extractGnbAndLcridFromDn(dn);
     const entry = { dn, lat: coord.lat, lon: coord.lon, gnb, lcrid };
     const key = String(phys);
@@ -242,25 +233,13 @@ async function loadNrcelPrecomputed(file, xymrbtsmap){
   return map;
 }
 
-// writer
-async function createWriter(suggestedName){
-  if ('showSaveFilePicker' in window) {
-    try {
-      const handle = await window.showSaveFilePicker({ suggestedName });
-      const writable = await handle.createWritable();
-      return {
-        async write(text){ await writable.write(text); },
-        async close(){ await writable.close(); },
-        async getBlob(){ return null; }
-      };
-    } catch(e) {
-      logInfo('Save dialog cancelled; fallback to blob output');
-    }
-  }
-  const parts=[];
+// CHUNKED writer (always used now)
+async function createChunkedWriter(){
+  const parts = [];
+  let rows = 0;
   return {
-    async write(text){ parts.push(text); },
-    async close(){ const blob = new Blob(parts,{type:'text/csv'}); fallbackBlobUrl = URL.createObjectURL(blob); },
+    async write(text){ parts.push(text); rows++; if (rows % 5000 === 0) await new Promise(r=>setTimeout(r,0)); },
+    async close(){ const blob = new Blob(parts,{type:'text/csv;charset=utf-8;'}); fallbackBlobUrl = URL.createObjectURL(blob); },
     async getBlob(){ return fallbackBlobUrl; }
   };
 }
@@ -273,7 +252,7 @@ async function processAll(){
   const fA = fileAlarms.files[0], fN = fileNrcel.files[0], fX = fileXymrbts.files[0];
   if (!fA || !fN || !fX){ logWarn('All three files required'); processBtn.disabled=false; return; }
 
-  const writer = await createWriter((outnameInput.value || 'nrrel-mapping.csv').trim());
+  const writer = await createChunkedWriter();
   await writer.write('source_dn,physCellId,target_dn,gNB,Lcrid,distance_m\r\n');
 
   const xymap = await loadXymrbts(fX);
@@ -315,7 +294,6 @@ async function processAll(){
       for (let i=0;i<candidates.length;i++){
         const t = candidates[i];
         const d = haversineMeters(srcCoord.lat, srcCoord.lon, t.lat, t.lon);
-        logCompare(`pci=${physKey} src='${source_dn}' tgt='${t.dn}' d=${d.toFixed(3)}`);
         if (!nearest || d < nearest.distance_m) nearest = { target_dn: t.dn, distance_m: d, gnb: t.gnb, lcrid: t.lcrid };
       }
       if (!nearest) {
@@ -325,7 +303,6 @@ async function processAll(){
       } else {
         await writer.write(`${escapeCsv(source_dn)},${escapeCsv(physKey)},${escapeCsv(nearest.target_dn)},${escapeCsv(nearest.gnb)},${escapeCsv(nearest.lcrid)},${nearest.distance_m.toFixed(3)}\r\n`);
         outRows++;
-        logNearest(`pci=${physKey} src='${source_dn}' nearest='${nearest.target_dn}' gNB=${nearest.gnb} Lcrid=${nearest.lcrid} d=${nearest.distance_m.toFixed(3)}`);
       }
     }
 
@@ -336,14 +313,14 @@ async function processAll(){
 
   await writer.close();
 
-  logInfo(`Finished`);
+  logInfo(`Finished. processedRows=${processed} outputRows=${outRows}`);
   notesEl.textContent = `Warnings: ${warnings.length} — Alarm rows processed: ${processed} — Output rows: ${outRows}`;
   if (warnings.length) {
     const wg = document.createElement('div'); wg.id='warningsBlock'; wg.textContent = warnings.join('\n');
     warningsArea.innerHTML=''; warningsArea.appendChild(wg);
   } else warningsArea.innerHTML='';
 
-  // show download button only if fallback blob exists
+  // Show download button now (always available because we created a blob)
   const url = await writer.getBlob();
   if (url) {
     fallbackBlobUrl = url;
@@ -355,19 +332,15 @@ async function processAll(){
       let name = (outnameInput.value||'nrrel-mapping').trim(); if (!/\.csv$/i.test(name)) name += '.csv';
       a.download = name; document.body.appendChild(a); a.click(); a.remove();
     };
-  } else {
-    // file already saved via Save dialog; keep download hidden
-    downloadBtn.style.display = 'none';
-    downloadBtn.disabled = true;
   }
 
   processBtn.disabled = false;
 }
 
-// attach events
+// attach
 processBtn.addEventListener('click', ()=>{ processAll().catch(e=>{ logWarn('Processing error: '+(e&&e.message?e.message:String(e))); processBtn.disabled=false; }); });
 
-// initial
+// init
 logInfo('Ready. Select files to enable processing.');
 </script>
 </body>
