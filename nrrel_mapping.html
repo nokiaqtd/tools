@@ -198,23 +198,99 @@ async function loadXymrbts(file){
   return map;
 }
 
-// load nrcel precompute
+// load nrcel precompute - DYNAMIC column detection for dn and physCellid
 async function loadNrcelPrecomputed(file, xymrbtsmap){
-  logInfo('Loading nrcel and precomputing...');
-  const INDEX_AL=37, INDEX_AR=43;
+  logInfo('Loading nrcel and precomputing (dynamic column detection)...');
+
+  // fallback indexes (keep old defaults in case detection fails)
+  const FALLBACK_COL_DN = 37;  // previous INDEX_AL
+  const FALLBACK_COL_PCI = 43; // previous INDEX_AR
+
+  let colx = -1;
+  let col_dn = -1;
+  let col_pci = -1;
+
   const map = new Map();
   let lnCount=0, stored=0;
   await streamFileLines(file, async (line, ln) => {
     lnCount++;
     if (!line.trim()) return;
-    if (ln===2) return;
-    if (ln < 3) return;
+
     const cols = parseCSVLine(line);
-    if (cols.length <= Math.max(INDEX_AL, INDEX_AR)) { logWarn(`nrcel line ${ln} cols=${cols.length}`); return; }
-    const dn = (cols[INDEX_AL]||'').trim();
-    const phys = (cols[INDEX_AR]||'').trim();
+
+    // Row 1: find 'com.nokia.srbts.nrbts:NRCELL' to get colx
+    if (ln === 1) {
+      for (let i=0;i<cols.length;i++){
+        if ((cols[i]||'').trim() === 'com.nokia.srbts.nrbts:NRCELL') { colx = i; break; }
+      }
+      if (colx === -1) {
+        logWarn("nrcel row1: 'com.nokia.srbts.nrbts:NRCELL' not found in row 1 — will attempt fallback columns.");
+      } else {
+        logInfo(`nrcel: found colx at index ${colx} (0-based)`);
+      }
+      return; // header row, do not process as data
+    }
+
+    // Row 2: find '$dn' starting from colx, then 'physCellId' starting from col_dn
+    if (ln === 2) {
+      if (colx !== -1) {
+        // start from colx
+        for (let j = colx; j < cols.length; j++){
+          if ((cols[j]||'').trim() === '$dn') { col_dn = j; break; }
+        }
+        if (col_dn === -1) {
+          logWarn("nrcel row2: '$dn' not found starting from colx — will attempt fallback.");
+        } else {
+          logInfo(`nrcel: found col_dn at index ${col_dn} (0-based)`);
+          // find physCellId starting from col_dn
+          for (let k = col_dn; k < cols.length; k++){
+            if ((cols[k]||'').trim() === 'physCellId') { col_pci = k; break; }
+          }
+          if (col_pci === -1) {
+            logWarn("nrcel row2: 'physCellId' not found starting from col_dn — will attempt fallback.");
+          } else {
+            logInfo(`nrcel: found col_pci at index ${col_pci} (0-based)`);
+          }
+        }
+      } else {
+        // colx not found, attempt to directly find $dn and physCellId in row2 (best-effort)
+        for (let j = 0; j < cols.length; j++){
+          if ((cols[j]||'').trim() === '$dn') { col_dn = j; break; }
+        }
+        if (col_dn !== -1) {
+          logInfo(`nrcel: fallback found col_dn at index ${col_dn} (0-based)`);
+          for (let k = col_dn; k < cols.length; k++){
+            if ((cols[k]||'').trim() === 'physCellId') { col_pci = k; break; }
+          }
+          if (col_pci !== -1) logInfo(`nrcel: fallback found col_pci at index ${col_pci} (0-based)`);
+        } else {
+          logWarn("nrcel row2: fallback '$dn' not found in row 2.");
+        }
+      }
+
+      // If detection failed, use fallbacks but log it
+      if (col_dn === -1) {
+        col_dn = FALLBACK_COL_DN;
+        logInfo(`nrcel: using fallback col_dn=${col_dn}`);
+      }
+      if (col_pci === -1) {
+        col_pci = FALLBACK_COL_PCI;
+        logInfo(`nrcel: using fallback col_pci=${col_pci}`);
+      }
+
+      return; // header row, do not process as data
+    }
+
+    // From here on, ln >= 3 -> data rows
+    // ensure we have enough columns
+    const maxNeededIndex = Math.max(col_dn, col_pci);
+    if (cols.length <= maxNeededIndex) { logWarn(`nrcel line ${ln} cols=${cols.length} missing expected columns up to ${maxNeededIndex}`); return; }
+
+    const dn = (cols[col_dn]||'').trim();
+    const phys = (cols[col_pci]||'').trim();
     if (!phys) return;
     if (!dn) { logWarn(`nrcel missing dn at line ${ln} phys=${phys}`); return; }
+
     const mrb = extractMrbtsFromDn(dn);
     if (!mrb) return;
     const coord = xymrbtsmap.get(String(mrb));
