@@ -329,7 +329,8 @@ async function processAll(){
   if (!fA || !fN || !fX){ logWarn('All three files required'); processBtn.disabled=false; return; }
 
   const writer = await createChunkedWriter();
-  await writer.write('source_dn,physCellId,target_dn,gNB,Lcrid,distance_m\r\n');
+  // NOTE: COUNT column added immediately after source_dn as requested
+  await writer.write('source_dn,COUNT,physCellId,target_dn,gNB,Lcrid,distance_m\r\n');
 
   const xymap = await loadXymrbts(fX);
   const pciMap = await loadNrcelPrecomputed(fN, xymap);
@@ -346,23 +347,33 @@ async function processAll(){
     const info = (cols[22]||'').trim();
     if (!source_dn){ logWarn(`missing source_dn at line ${ln}`); return; }
 
-    const pciMatches=[];
-    const regex = /NR-PCI\s*=\s*(\d+)\s*COUNT/gi;
+    // collect NR-PCI occurrences and their following COUNT (if any)
+    const pciObjects = [];
+    const regexPCI = /NR-PCI\s*=\s*(\d+)/gi;
     let m;
-    while ((m = regex.exec(info)) !== null) pciMatches.push(m[1]);
-    if (pciMatches.length === 0){ processed++; return; }
+    while ((m = regexPCI.exec(info)) !== null) {
+      const start = m.index;
+      const rest = info.slice(start);
+      const mCount = rest.match(/COUNT\s*=\s*(\d+)(?=[,\s]|$)/i);
+      const count = mCount ? mCount[1] : '';
+      pciObjects.push({ pci: m[1], count });
+    }
+    if (pciObjects.length === 0){ processed++; return; }
 
     const source_mrb = extractMrbtsFromDn(source_dn);
     if (!source_mrb){ logWarn(`cannot extract mrbts from source_dn='${source_dn}' line ${ln}`); processed++; return; }
     const srcCoord = xymap.get(String(source_mrb));
     if (!srcCoord){ logWarn(`source mrbts=${source_mrb} not found for source_dn='${source_dn}'`); processed++; return; }
 
-    for (const pci of pciMatches){
+    for (const obj of pciObjects){
+      const pci = obj.pci;
+      const countVal = obj.count; // string or '' if not found
       const physKey = String(pci);
       const candidates = pciMap.get(physKey);
       if (!candidates || candidates.length === 0) {
         logWarn(`no target candidate for phys=${physKey} source='${source_dn}'`);
-        await writer.write(`${escapeCsv(source_dn)},${escapeCsv(physKey)},,,,\r\n`);
+        // write with COUNT after source_dn (may be blank)
+        await writer.write(`${escapeCsv(source_dn)},${escapeCsv(countVal)},${escapeCsv(physKey)},,,,\r\n`);
         outRows++;
         continue;
       }
@@ -374,10 +385,10 @@ async function processAll(){
       }
       if (!nearest) {
         logWarn(`no valid coords for phys=${physKey} source='${source_dn}'`);
-        await writer.write(`${escapeCsv(source_dn)},${escapeCsv(physKey)},,,,\r\n`);
+        await writer.write(`${escapeCsv(source_dn)},${escapeCsv(countVal)},${escapeCsv(physKey)},,,,\r\n`);
         outRows++;
       } else {
-        await writer.write(`${escapeCsv(source_dn)},${escapeCsv(physKey)},${escapeCsv(nearest.target_dn)},${escapeCsv(nearest.gnb)},${escapeCsv(nearest.lcrid)},${nearest.distance_m.toFixed(3)}\r\n`);
+        await writer.write(`${escapeCsv(source_dn)},${escapeCsv(countVal)},${escapeCsv(physKey)},${escapeCsv(nearest.target_dn)},${escapeCsv(nearest.gnb)},${escapeCsv(nearest.lcrid)},${nearest.distance_m.toFixed(3)}\r\n`);
         outRows++;
       }
     }
