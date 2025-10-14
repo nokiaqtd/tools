@@ -34,13 +34,14 @@
 <body>
   <!-- initial src is the base. script below will append the page query string if present -->
   <iframe id="ndbFrame"
-    src="https://script.google.com/macros/s/AKfycbz4Zvq5B4qUDIVPa-CPMtJ45gmP2BaBytIvdWYp14dNWQ87jOPzVpvbGeJxH2Dwn4Z9/exec"
+    <!-- src="https://script.google.com/macros/s/AKfycbz4Zvq5B4qUDIVPa-CPMtJ45gmP2BaBytIvdWYp14dNWQ87jOPzVpvbGeJxH2Dwn4Z9/exec" -->
+    src='https://script.google.com/macros/s/AKfycbzdjut_y6fpO37rHDiVxhnSjNbIPKey1_HFuICS_rR60LZ5o6AUSYcPjBQ2V0Sx6PkB/exec'
     allow="clipboard-write; clipboard-read; geolocation; microphone; camera; accelerometer; gyroscope; autoplay">
   </iframe>
 
   <script>
     (function(){      
-      const base = 'https://script.google.com/macros/s/AKfycbz4Zvq5B4qUDIVPa-CPMtJ45gmP2BaBytIvdWYp14dNWQ87jOPzVpvbGeJxH2Dwn4Z9/exec';
+      const base = 'https://script.google.com/macros/s/AKfycbzdjut_y6fpO37rHDiVxhnSjNbIPKey1_HFuICS_rR60LZ5o6AUSYcPjBQ2V0Sx6PkB/exec';
       const pageQS = location.search || ''; // includes leading '?' when present
 
       // OPTION 1 (default): forward entire query string from parent to iframe
