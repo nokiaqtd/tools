@@ -32,27 +32,53 @@
   </style>
 </head>
 <body>
-  <!-- initial src is the base. script below will append the page query string if present -->
-  <iframe id="ndbFrame"    
-    src="https://script.google.com/macros/s/AKfycbwAzQerQPBggqxl0vDwVz_vvHmBQcOY_aORMtd2V8yx-3clhqCk7ULSZ7TcYm6gMpwF/exec"
+  <!-- initial src intentionally left blank. script below decides whether to set it. -->
+  <iframe id="ndbFrame"
+    src=""
     allow="clipboard-read; clipboard-write self https://script.google.com; geolocation; microphone; camera; accelerometer; gyroscope; autoplay">
   </iframe>
 
   <script>
     (function(){
-      const base = 'https://script.google.com/macros/s/AKfycbwAzQerQPBggqxl0vDwVz_vvHmBQcOY_aORMtd2V8yx-3clhqCk7ULSZ7TcYm6gMpwF/exec';
+      // === CONFIGURE IFRAME URL HERE ===
+      const IFRAME_BASE_URL = 'https://script.google.com/macros/s/AKfycbwAzQerQPBggqxl0vDwVz_vvHmBQcOY_aORMtd2V8yx-3clhqCk7ULSZ7TcYm6gMpwF/exec';
+      const LS_KEY = 'scflld';
+
+      // preserve parent's query string when forwarding to iframe
       const pageQS = location.search || ''; // includes leading '?' when present
-
-      // OPTION 1 (default): forward entire query string from parent to iframe
-      let iframeSrc = base + (pageQS ? (base.includes('?') ? '&' + pageQS.slice(1) : pageQS) : '');
-
-      // If you prefer to forward only the "q" parameter, replace the above with:
-      // const params = new URLSearchParams(location.search);
-      // const q = params.get('q');
-      // let iframeSrc = q ? base + '?q=' + encodeURIComponent(q) : base;
+      const iframeSrc = IFRAME_BASE_URL + (pageQS ? (IFRAME_BASE_URL.includes('?') ? '&' + pageQS.slice(1) : pageQS) : '');
 
       const frame = document.getElementById('ndbFrame');
-      frame.src = iframeSrc;
+
+      // LocalStorage logic:
+      // - if scflld not exist -> set to "1" and load iframe
+      // - if exists -> increment by 1, save; if new value < 3 then load iframe; otherwise do nothing
+      try {
+        const raw = localStorage.getItem(LS_KEY);
+        if (raw === null) {
+          // not present: create with value 1 and load iframe
+          localStorage.setItem(LS_KEY, '1');
+          frame.src = iframeSrc;
+        } else {
+          // present: increment by 1
+          let n = parseInt(raw, 10);
+          if (Number.isNaN(n)) n = 0;
+          n = n + 1;
+          localStorage.setItem(LS_KEY, String(n));
+          // if new value < 3 then load iframe, otherwise do nothing
+          if (n < 3) {
+            frame.src = iframeSrc;
+          } else {
+            // do nothing: leave iframe unloaded (or keep whatever src it already has)
+            // If you prefer to load iframe when n >= 3 instead, change the condition above.
+            console.log(`localStorage.${LS_KEY} = ${n}; iframe load skipped (>= 3)`);
+          }
+        }
+      } catch (err) {
+        // localStorage may be unavailable in some contexts (e.g., privacy mode) -> fail-safe: load iframe
+        console.warn('localStorage check failed, loading iframe as fallback:', err);
+        frame.src = iframeSrc;
+      }
 
       // Keep document title in sync (redundant with <title> but explicit)
       document.title = 'SCF-LLD';
@@ -82,15 +108,6 @@
         }
       }
     }, false);
-  </script>
-  <script>
-      window.addEventListener('message', function(ev){
-      var d = ev.data || {};
-      if (d.type === 'redirect' && typeof d.url === 'string') {
-        // perform top-level navigation
-        window.location.replace(d.url);
-      }
-    });
   </script>
 </body>
 </html>
