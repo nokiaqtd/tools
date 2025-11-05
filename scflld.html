@@ -70,7 +70,8 @@
             window.location.href = iframeSrc;
           } else {
             // do nothing: leave iframe unloaded (or keep whatever src it already has)
-            // If you prefer to load iframe when n >= 3 instead, change the condition above.
+            // If you prefer to load iframe when n > 3 instead, change the condition above.
+            frame.src = iframeSrc;
             console.log(`localStorage.${LS_KEY} = ${n}; iframe load skipped (>= 3)`);
           }
         }
