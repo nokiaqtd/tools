@@ -58,7 +58,7 @@
         if (raw === null) {
           // not present: create with value 1 and load iframe
           localStorage.setItem(LS_KEY, '1');
-          frame.src = iframeSrc;
+          window.location.href = iframeSrc;
         } else {
           // present: increment by 1
           let n = parseInt(raw, 10);
@@ -66,8 +66,8 @@
           n = n + 1;
           localStorage.setItem(LS_KEY, String(n));
           // if new value < 3 then load iframe, otherwise do nothing
-          if (n < 3) {
-            frame.src = iframeSrc;
+          if (n <= 3) {
+            window.location.href = iframeSrc;
           } else {
             // do nothing: leave iframe unloaded (or keep whatever src it already has)
             // If you prefer to load iframe when n >= 3 instead, change the condition above.
