@@ -1,0 +1,27 @@
+<script>
+  // originCheck: fill with your iframe origin if you want to restrict messages
+  const allowedOrigin = '*'; // or 'https://script.google.com' / actual origin
+
+  window.addEventListener('message', function(e) {
+    // optional: validate origin
+    if (allowedOrigin !== '*' && e.origin !== allowedOrigin) return;
+
+    const data = e.data || {};
+    if (data.type === 'GAS_AUTH') {
+      if (data.email && data.email.length) {
+        console.log('User signed in as', data.email);
+        // do whatever: show user email, enable UI, etc.
+      } else {
+        console.log('No email returned — probably not signed-in or blocked by policy');
+        // you can prompt login (see note below)
+      }
+    }
+  }, false);
+
+  // optionally ask iframe to re-check (if iframe loaded earlier)
+  function askIframeToCheckAuth(iframeEl) {
+    iframeEl.contentWindow.postMessage({ type: 'CHECK_AUTH' }, '*');
+  }
+</script>
+
+<iframe id="gasFrame" src="https://script.google.com/macros/s/AKfycbw-Xojfk41cIwj7EWEaYizeMgX05-Z3UwG1I9VSSdq3P5jFxIePLKrTlPb0qIsRjtr5/exec" width="800" height="600"></iframe>
