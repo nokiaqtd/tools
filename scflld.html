@@ -83,6 +83,14 @@
       }
     }, false);
   </script>
-  
+  <script>
+      window.addEventListener('message', function(ev){
+      var d = ev.data || {};
+      if (d.type === 'redirect' && typeof d.url === 'string') {
+        // perform top-level navigation
+        window.location.replace(d.url);
+      }
+    });
+  </script>
 </body>
 </html>
