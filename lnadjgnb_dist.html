@@ -1,88 +1,1264 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ENDC V1.3</title>
-  <script>
-    // SVG-only favicon: white "N" on hsl(219 100% 50%) background
-    (function(){
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="N">
-        <rect width="100%" height="100%" fill="hsl(219 100% 50%)"/>
-        <!-- left vertical bar -->
-        <rect x="8" y="8" width="10" height="48" fill="#fff"/>
-        <!-- diagonal stroke (slanted middle) -->
-        <polygon points="18,8 30,8 46,56 34,56" fill="#fff"/>
-        <!-- right vertical bar -->
-        <rect x="46" y="8" width="10" height="48" fill="#fff"/>
-      </svg>`;
-
-      const url = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
-      document.querySelectorAll('link[rel~="icon"]').forEach(n => n.remove());
-      const link = document.createElement('link');
-      link.rel = 'icon';
-      link.type = 'image/svg+xml';
-      link.href = url;
-      document.head.appendChild(link);
-    })();
-  </script>
+  <title>LNADJGNB distance</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    html, body { margin: 0; height: 100%; background: #0f62ff}
-    iframe { border: none; width: 100%; height: 100%; touch-action: auto; -ms-touch-action: auto; pointer-events: auto; -webkit-overflow-scrolling: touch; }
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --muted: #6b7280;
+      --accent: #0f62ff;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: Inter, system-ui, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      margin: 0;
+      background: var(--accent);
+      color: #0b1220
+    }
+
+    .wrap {
+        display: flex;
+        justify-content: center;
+        margin: 28px auto;
+        padding: 20px;
+      }
+
+      .card {
+        background: var(--card);
+        border-radius: var(--radius);
+        box-shadow: 0 6px 18px rgba(11, 17, 32, 0.06);
+        padding: 20px;
+        max-width: 1100px; /* keep previous max layout width */
+        width: auto;       /* allow shrink-to-content */
+      }
+
+    h2 {
+      margin: 0 0 6px;
+      font-size: 20px
+    }
+
+    .lead {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 13px
+    }
+
+    .row {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap
+    }
+
+    .column {
+      flex: 0 0 150px; /* fixed width, adjust 120px as needed */
+      min-width: 300px
+    }
+
+    input[type=file] {
+      display: block
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px
+    }
+
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: 0;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600
+    }
+
+    button.ghost {
+      background: #eef2ff;
+      color: var(--accent);
+      border: 1px solid rgba(15, 98, 255, 0.08)
+    }
+
+    .small {
+      font-size: 12px;
+      color: var(--muted)
+    }
+
+    .file-block {
+      background: #fbfdff;
+      border-radius: 8px;
+      padding: 12px;
+      border: 1px solid #eef6ff
+    }
+
+    label.small {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px
+    }
+
+    /* REPLACE existing #logArea block with this */
+    #logArea {
+      white-space: pre-wrap;
+      background: #0b1220;
+      color: #e6eefb;
+      /* padding: top right bottom left — bottom is larger for extra space inside the area */
+      padding: 12px 12px 28px 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+      /* margin below the log area so it doesn't touch modal footer */
+      margin-bottom: 16px;
+      /* allow it to grow to most of the viewport but leave room for modal header/footer */
+      max-height: calc(100vh - 160px);
+      height: auto;
+      overflow: auto;
+      font-family: monospace;
+      font-size: 12px;
+      display: none;
+      /* keep whatever show/hide behaviour you already use */
+      box-sizing: border-box;
+      /* include padding in the size calculation */
+    }
+
+
+    #warningsBlock {
+      margin-top: 10px;
+      white-space: pre-wrap;
+      background: #fff7f0;
+      border-radius: 6px;
+      padding: 8px;
+      border: 1px solid #ffd8b5;
+      color: #7a3b00;
+      max-height: 220px;
+      overflow: auto;
+      font-family: monospace
+    }
+
+    /* paste sheet */
+    .paste-area {
+      margin-top: 14px
+    }
+
+    .sheet-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px
+    }
+
+    .sheet-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden
+    }
+
+    .sheet-table th,
+    .sheet-table td {
+      padding: 8px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 13px;
+      text-align: left
+    }
+
+    .sheet-table th {
+      background: #f8fafc;
+      color: var(--muted);
+      font-weight: 600
+    }
+
+    .muted-note {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 6px
+    }
+
+    .right-col {
+      flex: 0 0 600px; /* or any width you want */
+      padding: 0.25rem;
+    }
+
+    .input-text {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #e6eefb;
+      margin-top: 6px
+    }
+
+    .btn-ghost {
+      background: #fff;
+      border: 1px solid #e6eefb;
+      color: var(--accent);
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer
+    }
+
+    #pasteBox {
+      border: 3px solid #0d6efd;
+      /* brighter, thicker blue */
+      border-radius: 6px;
+      outline: none;
+      background-color: #f8fbff;
+      /* very light blue background for contrast */
+      box-shadow: 0 0 6px rgba(13, 110, 253, 0.6);
+      /* subtle glow */
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    #pasteBox:focus {
+      border-color: #0056b3;
+      /* darker blue on focus */
+      box-shadow: 0 0 8px rgba(0, 86, 179, 0.8);
+      /* stronger glow when focused */
+    }
+
+    /* HIDE legacy paste/sheet UI - removed per user request */
+    #paste-area,
+    #columns,
+    #pasteBox,
+    #importPasteBtn,
+    #clearSheetBtn,
+    #sheetTable,
+    #thead,
+    #sheetRowCount {
+      display: none !important;
+      visibility: hidden !important;
+    }
+
+    .btn-color1 {
+      background: rgb(15, 98, 255);
+      color: white;
+    }
+
+    .btn-color2 {
+      background: #eef2ff;
+      color: rgb(15, 98, 255);
+    }    
   </style>
 </head>
+
 <body>
-  <!-- initial src is the base. script below will append the page query string if present -->
-  <iframe id="ndbFrame"    
-    src=""
-    allow="clipboard-read; clipboard-write self https://script.google.com; geolocation; microphone; camera; accelerometer; gyroscope; autoplay">
-  </iframe>
+  <div class="wrap">
+    <div class="card" role="main" aria-labelledby="title">
+      <h2 id="title">LNADJGNB DISTANCE</h2>
+      <p class="lead">Provide 1 mandatory input (LNADJGNB dump)</p>
+
+
+      <div class="row">
+        <!-- left: file inputs + paste sheet -->
+        <div class="column">
+          <div class="file-block" aria-label="File inputs">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div class="file-item">
+                <label class="small">LNADJGNB dump (CSV)</label>
+                <input id="fileLNADJGNB" type="file" accept=".csv" />
+              </div>
+            </div>
+
+
+            <div id="fileNotes" class="muted-note"></div>
+          </div>
+
+          <!-- modern paste sheet -->
+          <div class="paste-area">
+            <div class="sheet-controls">
+              <div style="flex:1">
+                <label class="small"></label>
+                <div id="columns" class="muted-note">Default columns: <strong>mrbts_source</strong></div>
+              </div>
+            </div>
+
+            <!-- paste textarea (hidden by default, but accessible) -->
+
+            <textarea id="pasteBox" placeholder="Paste rows copied from Excel here then click Import Paste"
+              style="width:50%;min-height:80px;padding:8px;border-radius:8px;border:1px solid #eef6ff;margin-top:8px;font-family:inherit"></textarea>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button id="importPasteBtn" class="ghost btn-ghost" type="button">Import Paste</button>
+              <button id="clearSheetBtn" class="ghost btn-ghost" type="button">Clear Sheet</button>
+              <div class="small" style="margin-left:auto;color:var(--muted)">Rows: <span id="sheetRowCount">0</span>
+              </div>
+            </div>
+
+            <!-- editable table -->
+            <div style="margin-top:10px;overflow:auto;border-radius:8px">
+              <table id="sheetTable" class="sheet-table" role="table" aria-label="Paste sheet">
+                <thead id="thead">
+                  <tr>
+                    <th>mrbts_source</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- rows inserted here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="warningsArea" style="margin-top:12px"></div>
+        </div>
+
+        <!-- right: controls + output name + log -->
+        <div class="right-col">
+          <label class="small">Output filename</label>
+          <input id="outname" class="input-text" value="lnadjgnb_distance.csv" />
+          <div class="controls" style="margin-top:12px;flex-direction:column">
+            <div style="display:flex;gap:8px">
+              <button id="processBtn" disabled>Process</button>
+              <button id="downloadBtn" disabled>Download</button>
+            </div>
+            <div style="margin-top:8px" class="small"></div>
+          </div>
+
+          <div id="status" class="small" style="margin-top:12px;color:var(--muted)"></div>
+
+          <div id="logArea" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <div class="footer" style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
+        <div class="small">Version: 1.0.0</div>
+      </div>
+    </div>
+  </div>
 
   <script>
-    (function(){
-      const base = 'https://script.google.com/macros/s/AKfycbxAnh_FY981sGjpFt8N8qiB4HGGXQc9p8DpnCRF81-8NYOzeBXQiSqfpVqrfKp2cwpwSQ/exec';
-      const pageQS = location.search || ''; // includes leading '?' when present
 
-      // OPTION 1 (default): forward entire query string from parent to iframe
-      let iframeSrc = base + (pageQS ? (base.includes('?') ? '&' + pageQS.slice(1) : pageQS) : '');
+    //helper functions
+    function haversineMeters(lat1, lon1, lat2, lon2) {
+      const toRad = d => d * Math.PI / 180;
+      const R = 6371000;
+      const φ1 = toRad(lat1), φ2 = toRad(lat2);
+      const dφ = toRad(lat2 - lat1), dλ = toRad(lon2 - lon1);
+      const a = Math.sin(dφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(dλ / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
 
-      // If you prefer to forward only the "q" parameter, replace the above with:
-      // const params = new URLSearchParams(location.search);
-      // const q = params.get('q');
-      // let iframeSrc = q ? base + '?q=' + encodeURIComponent(q) : base;
+    /**
+     * Robust LNADJGNB parser
+     * - checks for 'NOKLTE:LNADJGNB' on first row (header is next row)
+     * - otherwise finds header row containing $dn
+     * - adjGnbId is assumed to be the column right after $dn; fallback tries to find 'adjGnbId' by name
+     * - returns { umrbts: [...uniqueStrings], pairs: [[mrbts, adjGnbId, null], ...] }
+     */
+    async function parseLNADJGNBFile(file) {
+      return new Promise((resolve, reject) => {
+        if (!file) {
+          appendLog('ERROR: parseLNADJGNBFile called without file');
+          resolve({ umrbts: [], pairs: [] });
+          return;
+        }
 
-      const frame = document.getElementById('ndbFrame');
-      frame.src = iframeSrc;
+        // simple CSV line parser that handles quoted commas; prefer tab split when tabs exist
+        function splitLine(line) {
+          if (line.indexOf('\t') !== -1) return line.split('\t').map(s => s.trim());
+          // basic CSV splitter that handles quoted fields ("..."), does not handle multiline quotes
+          const regex = /("([^"]|"")*"|[^,]+|,)/g;
+          // simpler alternative: match quoted or non-quoted fields
+          const fields = [];
+          let cur = '';
+          let inQuotes = false;
+          for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') {
+              // handle doubled quotes
+              if (inQuotes && line[i + 1] === '"') {
+                cur += '"';
+                i++; // skip next quote
+              } else {
+                inQuotes = !inQuotes;
+              }
+              continue;
+            }
+            if (!inQuotes && ch === ',') {
+              fields.push(cur.trim());
+              cur = '';
+              continue;
+            }
+            cur += ch;
+          }
+          fields.push(cur.trim());
+          return fields;
+        }
 
-      // Keep document title in sync (redundant with <title> but explicit)
-      // document.title = 'ENDC';
-    })();
-  </script>
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const raw = String(reader.result || '');
+            // split lines and trim; keep empty lines for indexing but filter them later if needed
+            let lines = raw.split(/\r?\n/);
 
-  <script>
-    // allow only the trusted iframe origin(s)
-    const TRUSTED_IFRAME_ORIGINS = [
-      'https://script.google.com'
-      // add other origins if you host the iframe elsewhere
+            // remove trailing/leading empty lines
+            while (lines.length && lines[0].trim() === '') lines.shift();
+            while (lines.length && lines[lines.length - 1].trim() === '') lines.pop();
+
+            if (!lines.length) {
+              appendLog('WARN: LNADJGNB file empty after trimming.');
+              resolve({ umrbts: [], pairs: [] });
+              return;
+            }
+
+            // detect NOKLTE header on first non-empty line
+            const firstLine = (lines[0] || '').trim();
+            let headerLineIndex = -1;
+            if (/NOKLTE:LNADJGNB/i.test(firstLine)) {
+              // prefer next line as header
+              if (lines.length >= 2) {
+                headerLineIndex = 1;
+              } else {
+                appendLog('ERROR: NOKLTE:LNADJGNB found but no header line present.');
+                resolve({ umrbts: [], pairs: [] });
+                return;
+              }
+            } else {
+              // scan first few lines to find header containing $dn
+              for (let i = 0; i < Math.min(6, lines.length); i++) {
+                if (/\$dn/i.test(lines[i])) {
+                  headerLineIndex = i;
+                  break;
+                }
+              }
+              // if still not found, fall back to first line as header
+              if (headerLineIndex === -1) headerLineIndex = 0;
+            }
+
+            const headerCols = splitLine(lines[headerLineIndex]).map(h => (h || '').trim());
+            // find $dn column (case-insensitive exact or contains $dn)
+            let dnIndex = headerCols.findIndex(h => /^\$?dn$/i.test(h) || /^\$dn$/i.test(h) || h.toLowerCase().includes('$dn') || h.toLowerCase() === '$dn');
+            if (dnIndex === -1) {
+              // try looser match: any column that equals "$dn" ignoring case or contains 'dn' and '$'
+              dnIndex = headerCols.findIndex(h => h && h.toLowerCase().includes('dn'));
+            }
+            if (dnIndex === -1) {
+              appendLog('ERROR: Could not find $dn column in LNADJGNB header.');
+              resolve({ umrbts: [], pairs: [] });
+              return;
+            }
+
+            // prefer adj as dnIndex + 1
+            let adjIndex = dnIndex + 1;
+            if (adjIndex >= headerCols.length || !headerCols[adjIndex]) {
+              // fallback: try find column named adjGnbId (case-insensitive)
+              const foundAdj = headerCols.findIndex(h => h && /adjGnbId/i.test(h));
+              if (foundAdj !== -1) adjIndex = foundAdj;
+            }
+
+            if (adjIndex >= headerCols.length || adjIndex === -1) {
+              appendLog('ERROR: Could not locate adjGnbId column (expected at dnIndex+1 or header name).');
+              resolve({ umrbts: [], pairs: [] });
+              return;
+            }
+
+            // Now iterate data rows (rows after headerLineIndex)
+            const mrbtsValues = [];
+            const adjValues = [];
+            const pairs = []; // 2D rows: [mrbts, adjGnbId, null]
+
+            for (let i = headerLineIndex + 1; i < lines.length; i++) {
+              const rawLine = lines[i];
+              if (!rawLine || !rawLine.trim()) continue;
+              const cols = splitLine(rawLine);
+              // guard index
+              const rawDn = (cols[dnIndex] || '').trim();
+              const rawAdj = (cols[adjIndex] || '').trim();
+              if (!rawDn && !rawAdj) continue;
+
+              // extract MRBTS id from rawDn: MRBTS-([^/]+)
+              let mrbts = rawDn;
+              const m = rawDn.match(/MRBTS-([^\/]+)/i);
+              if (m && m[1]) mrbts = m[1].trim();
+              // if extraction fails, fallback to the rawDn trimmed
+              if (!mrbts) mrbts = rawDn.trim();
+
+              // push
+              if (mrbts) mrbtsValues.push(String(mrbts));
+              if (rawAdj) adjValues.push(String(rawAdj));
+
+              pairs.push([String(mrbts), String(rawAdj || ''), null]);
+            }
+
+            // combine unique values preserving insertion order
+            const combinedSet = [];
+            const pushUnique = (val) => {
+              const s = String(val);
+              if (!combinedSet.includes(s)) combinedSet.push(s);
+            };
+            mrbtsValues.forEach(pushUnique);
+            adjValues.forEach(pushUnique);
+
+            appendLog(`INFO: parseLNADJGNBFile -> rows parsed=${pairs.length}, unique combined=${combinedSet.length}`);
+
+            resolve({ umrbts: combinedSet, pairs: pairs });
+          } catch (err) {
+            appendLog('ERROR: parseLNADJGNBFile failed: ' + (err && err.message ? err.message : err));
+            reject(err);
+          }
+        };
+        reader.onerror = (e) => {
+          appendLog('ERROR: File read error: ' + (e?.message || 'unknown'));
+          reject(e);
+        };
+        reader.readAsText(file);
+      });
+    }
+
+
+    function DataUpdate(data) {
+      try {
+        appendLog(`INFO: DataUpdate received ${Array.isArray(data) ? data.length : 0} rows`);
+        if (!Array.isArray(data)) {
+          appendLog('ERROR: DataUpdate expected array; got non-array. Aborting.');
+          return;
+        }
+
+        // Build lookup: ENBID -> { lat, lon }
+        const lookup = {};
+        for (const row of data) {
+          if (!row || row.ENBID === undefined) continue;
+          const id = String(row.ENBID);
+          const lon = Number(row.X_LONGITUDE);
+          const lat = Number(row.Y_LATITUDE);
+          lookup[id] = {
+            lat: Number.isFinite(lat) ? lat : null,
+            lon: Number.isFinite(lon) ? lon : null
+          };
+        }
+
+        // Use window.umrbtsPairs (parsed earlier). Fallback to empty array if missing.
+        const pairsArr = Array.isArray(window.umrbtsPairs) ? window.umrbtsPairs : [];
+
+        let missingCoords = 0;
+        // Update pairs with distances (meters). Keep two-decimal precision.
+        for (let i = 0; i < pairsArr.length; i++) {
+          const left = String(pairsArr[i][0] || '');
+          const right = String(pairsArr[i][1] || '');
+          const leftC = lookup[left];
+          const rightC = lookup[right];
+
+          if (leftC && leftC.lat !== null && rightC && rightC.lat !== null) {
+            const dist = haversineMeters(leftC.lat, leftC.lon, rightC.lat, rightC.lon);
+            pairsArr[i][2] = Math.round(dist * 100) / 100; // meters, 2 decimals
+          } else {
+            pairsArr[i][2] = ''; // leave blank if coords missing
+            missingCoords++;
+          }
+        }
+
+        // Save updated pairs back to global so other code can inspect it
+        window.umrbtsPairs = pairsArr;
+
+        // Build CSV with header: mrbts_source,nrbts_target,distance
+        const esc = v => {
+          if (v === null || v === undefined) v = '';
+          v = String(v);
+          if (v.includes('"')) v = v.replace(/"/g, '""');
+          if (v.includes(',') || v.includes('"') || v.includes('\n') || v.includes('\r')) return `"${v}"`;
+          return v;
+        };
+
+        const header = ['mrbts_source', 'nrbts_target', 'distance'];
+        const lines = [header.join(',')];
+
+        for (const p of pairsArr) {
+          const a = p[0] || '';
+          const b = p[1] || '';
+          const d = (p[2] === null || p[2] === undefined) ? '' : String(p[2]);
+          lines.push([esc(a), esc(b), esc(d)].join(','));
+        }
+
+        const csvText = lines.join('\r\n');
+
+        // store CSV (download handler will add BOM as before)
+        window._NCR_COMBINED_CSV = csvText;
+
+        appendLog(`INFO: DataUpdate finished. pairs=${pairsArr.length}, missing_coords=${missingCoords}`);
+
+        // enable download button if present
+        if (typeof downloadBtn !== 'undefined' && downloadBtn) {
+          downloadBtn.disabled = false;
+        }
+
+        const btn = document.getElementById('downloadBtn');
+        if (btn) {
+          btn.disabled = false;
+
+          // 1) short beep using Web Audio API
+          (function beep(duration = 150, frequency = 880, volume = 0.05) {
+            try {
+              const Ctx = window.AudioContext || window.webkitAudioContext;
+              if (!Ctx) throw new Error('No AudioContext');
+              const ctx = new Ctx();
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = 'sine';
+              osc.frequency.value = frequency;
+              gain.gain.value = volume;
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.start();
+              setTimeout(() => {
+                osc.stop();
+                // close AudioContext to free resources (some browsers may warn)
+                if (ctx.close) ctx.close();
+              }, duration);
+            } catch (err) {
+              // fail silently if browser blocks audio (autoplay/user gesture) or unsupported
+              console.warn('beep failed:', err);
+            }
+          })();
+
+
+        }
+        // for debugging
+        // console.log('lookup', lookup);
+        // console.log('pairsArr (with distance)', pairsArr);
+        console.log('csv preview:\n' + (lines.slice(0, 5).join('\n')) + (lines.length > 5 ? '\n...' : ''));
+
+        // swap colors after done
+        processBtn.classList.remove('btn-color1');
+        processBtn.classList.add('btn-color2');
+
+        downloadBtn.classList.remove('btn-color2');
+        downloadBtn.classList.add('btn-color1');     
+        
+        appendLog(`INFO: Process finished`);
+
+      } catch (err) {
+        console.error('DataUpdate error', err);
+        appendLog('ERROR: DataUpdate failed: ' + (err && err.message ? err.message : String(err)));
+      }
+    
+    }
+
+    //end of helper functions
+
+    const fileLNADJGNB = document.getElementById('fileLNADJGNB');
+    const processBtn = document.getElementById('processBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const outnameInput = document.getElementById('outname');
+    const logArea = document.getElementById('logArea');
+    const warningsArea = document.getElementById('warningsArea');
+
+    const pasteBox = document.getElementById('pasteBox');
+    const importPasteBtn = document.getElementById('importPasteBtn');
+    const clearSheetBtn = document.getElementById('clearSheetBtn');
+    const sheetTable = document.getElementById('sheetTable').querySelector('tbody');
+    const thead = document.getElementById('thead');
+    const sheetRowCount = document.getElementById('sheetRowCount');
+    const columns = document.getElementById('columns');
+
+    let csvLNBTS;
+    if (sheetTable) {
+      sheetTable.style.visibility = 'hidden';
+      thead.style.visibility = 'hidden';
+      // sheetTable.style.position = 'absolute';
+    }
+
+
+    function updateControls() {
+      // Enable Process when a file is selected. Sheet/paste UI is removed from required flow.
+      const filesSelected = (fileLNADJGNB && fileLNADJGNB.files && fileLNADJGNB.files.length) ? true : false;
+      processBtn.disabled = !filesSelected;
+      // Download remains disabled until CSV is produced by processing
+      downloadBtn.disabled = true;
+      document.getElementById('status').textContent = filesSelected ? 'LNADJGNB selected' : 'No files selected';
+ 
+      // Make Process visually primary (if any ghost class exists elsewhere)
+      // try { processBtn.classList.remove('ghost'); } catch (e) { }
+
+      // initial colors
+      processBtn.classList.remove('btn-color2');
+      processBtn.classList.add('btn-color1');
+
+      downloadBtn.classList.remove('btn-color1');
+      downloadBtn.classList.add('btn-color2');
+    }      
+    
+
+
+    if (fileLNADJGNB) fileLNADJGNB.addEventListener('change', updateControls);
+
+
+    // Simple paste parser: accepts tab-delimited or comma-separated text.
+    function parsePasteToRows(text) {
+      const lines = text.replace(/\r\n/g, '\n').split('\n').map(l => l.trim()).filter(l => l.length);
+      const rows = [];
+      for (const line of lines) {
+        // prefer tab split, fall back to comma
+        let cols = line.split('\t');
+        if (cols.length === 1) cols = line.split(',');
+        rows.push(cols.map(c => c.trim()));
+      }
+      return rows;
+    }
+
+    function importPasteIntoTable() {
+      const text = pasteBox.value.trim();
+      if (!text) {
+        warningsArea.innerHTML = '<div id="warningsBlock" style="color:#7a3b00">Paste area is empty.</div>';
+        return;
+      }
+      const rows = parsePasteToRows(text);
+      // Clear existing rows
+      sheetTable.innerHTML = '';
+      // For each pasted row, insert into 6 columns (missing columns padded)
+      for (const cols of rows) {
+        const tr = document.createElement('tr');
+        for (let i = 0; i < 6; i++) {
+          const td = document.createElement('td');
+          td.contentEditable = "true";
+          td.textContent = cols[i] || '';
+          tr.appendChild(td);
+        }
+        sheetTable.appendChild(tr);
+      }
+      sheetRowCount.textContent = sheetTable.querySelectorAll('tr').length;
+      warningsArea.innerHTML = '';
+      updateControls();
+    }
+
+    // importPasteBtn.addEventListener('click', importPasteIntoTable);
+
+    // clearSheetBtn.addEventListener('click', () => {
+    //   sheetTable.innerHTML = '';
+    //   pasteBox.value = '';
+    //   sheetRowCount.textContent = '0';
+    //   updateControls();
+    // });
+
+    importPasteBtn.addEventListener('click', () => {
+      importPasteIntoTable(); // keep your original function call
+      // after import, show sheetTable and hide pasteBox
+      if (sheetTable) {
+        thead.style.visibility = 'visible';
+        sheetTable.style.visibility = 'visible';
+        sheetTable.style.position = 'static';
+      }
+      if (pasteBox) {
+        columns.style.visibility = 'hidden';
+        pasteBox.style.visibility = 'hidden';
+        pasteBox.style.position = 'absolute';
+      }
+    });
+
+    clearSheetBtn.addEventListener('click', () => {
+      sheetTable.innerHTML = '';
+      pasteBox.value = '';
+      sheetRowCount.textContent = '0';
+      updateControls();
+
+      // after clear, hide sheetTable and show pasteBox
+      if (sheetTable) {
+        thead.style.visibility = 'hidden';
+        sheetTable.style.visibility = 'hidden';
+        sheetTable.style.position = 'absolute';
+      }
+      if (pasteBox) {
+        columns.style.visibility = 'visible';
+        pasteBox.style.visibility = 'visible';
+        pasteBox.style.position = 'static';
+      }
+    });
+
+    // Simple row count update when table edited (delegation)
+    sheetTable.addEventListener('input', () => {
+      sheetRowCount.textContent = sheetTable.querySelectorAll('tr').length;
+      updateControls();
+    });
+
+    // Placeholder: processBtn should be wired to your ENDC processing routine.
+    // ----------------- START REPLACEMENT: wired ENDC processing -----------------
+    function appendLog(msg) {
+      const ts = (new Date()).toISOString();
+      if (!logArea.style.display) logArea.style.display = 'block';
+      // logArea.textContent += (logArea.textContent ? '\n' : '') + ts + ' ' + msg;
+      logArea.textContent += (logArea.textContent ? '\n' : '') + ' ' + msg;
+      logArea.scrollTop = logArea.scrollHeight;
+    }
+
+    function readSheetRows() {
+      // returns array of row arrays (6 columns per row)
+      const rows = [];
+      const trs = sheetTable.querySelectorAll('tr');
+      trs.forEach(tr => {
+        const cols = Array.from(tr.children).slice(0, 6).map(td => td.textContent.trim());
+        // consider empty first-column rows as skipped
+        if (cols.every(c => c === '')) return;
+        rows.push(cols);
+      });
+      return rows;
+    }
+
+    // Default column names for paste sheet
+    const sheetHeaders = ['mrbts_source'];
+
+    // The special outLNBTS columns (names and defaults)
+    const outCols = [
+      '$dn',
+      'actAdvStepwiseScellAdd', 'actEndcAdjCarrierChk', 'actEnhFlexCaWithEnDc', 'actUL256QamForEnDc', 'actUlTraffDrivUlCa', 'enableBwCombCheck', 'enableBwComSetChkEnDc', 'enableNonCompBcsChkEnDc',
+      'actIdleLBEnDcAware', 'actTransmittedBelowGap', 'actCAggrLteNrDualConnectivity', 'actDynTrigLteNrDualConnectivity',
+      'actEndcSpidFwd', 'actLteNrDualConnectivity', 'endcSchedWeightBoostDl', 'endcSchedWeightBoostUl', 'nrRestrictionOverride',
+      'actEndcAutoX2Setup', 'actUeBasedAnrNr', 'actUeBasedAnrNrHo', 'actEndcHo', 'actHoWoSnChg', 'actSnChangeSnInit',
+      'actLteNrFastNbrRelAdd', 'pdcpProf1001pdcpProfileId', 'pdcpProf1001pi2Target', 'pdcpProf1001snSizeDl', 'pdcpProf1001snSizeUl',
+      'pdcpProf1001statusRepReq', 'pdcpProf1001tDiscard', 'pdcpProf1001pi2TargetDelay', 'pdcpProf1001pi2TargetSize', 'pdcpProf1001pi2Variant',
+      'qciTab5lteNrDualConnectSupport', 'qciTab6lteNrDualConnectSupport', 'qciTab6nrPdcpProfIdx', 'qciTab7lteNrDualConnectSupport', 'qciTab7nrPdcpProfIdx',
+      'qciTab8lteNrDualConnectSupport', 'qciTab8nrPdcpProfIdx', 'qciTab9lteNrDualConnectSupport', 'qciTab9nrPdcpProfIdx', 'tLteNrDualConnectPrep', 'tS1eRABModInd'
     ];
-  
-    window.addEventListener('message', async (ev) => {
-      // validate origin
-      if (!TRUSTED_IFRAME_ORIGINS.some(o => ev.origin.startsWith(o))) return;
-      const msg = ev.data || {};
-      if (msg && msg.type === 'ndb-copy') {
-        try {
-          // do the clipboard write in the top-level context (must be secure context)
-          await navigator.clipboard.writeText(msg.text || '');
-          // reply success
-          ev.source.postMessage({ type: 'ndb-copy-result', ok: true, id: msg.id || null }, ev.origin);
-        } catch (err) {
-          // reply failure
-          ev.source.postMessage({ type: 'ndb-copy-result', ok: false, err: String(err), id: msg.id || null }, ev.origin);
+
+    // Provided default values in order (some positions intentionally blank if input omitted).
+    // If there are fewer values than outCols-1, remaining will be filled with ''.
+
+    const providedDefaults = [
+      '0', '1', '1', '1', '0', '1', '1', '1', '1', '0', '2', '1', '0', '1', '2', '2', '0', '', '1', '', '1', '3', '1', '1', '1001', '10', '3', '3', '3', '300', '700', '35', '0', '0', '1', '1001', '1', '1001', '1', '1001', '1', '1001', '500', '2000'
+    ];
+
+    // build map from column name -> default value (safer than index shifts)
+    var defaultsMap = {};
+    for (var i = 0; i < outCols.length; i++) {
+      var col = outCols[i];
+      if (col === '$dn') {
+        defaultsMap[col] = undefined; // computed per-row
+      } else {
+        // providedDefaults aligns with outCols starting at index 1
+        defaultsMap[col] = (providedDefaults[i - 1] !== undefined) ? providedDefaults[i - 1] : '';
+      }
+    }
+
+    function buildDefaultRowFor(lnbts) {
+      var row = {};
+      for (var i = 0; i < outCols.length; i++) {
+        var col = outCols[i];
+        if (col === '$dn') {
+          row[col] = 'PLMN-PLMN/MRBTS-' + lnbts + '/LNBTS-' + lnbts;
+        } else {
+          row[col] = defaultsMap[col];
         }
       }
-    }, false);
+      // trace column (kept last in object but CSV order is controlled by headers below)
+      row['src_LNBTS'] = lnbts;
+      return row;
+    }
+
+    function toCSV(rows, headers) {
+      // simple RFC4180-ish CSV builder (commas, quote fields if they contain comma/quote/newline)
+      const esc = v => {
+        if (v === null || v === undefined) return '';
+        const s = String(v);
+        if (s.includes('"') || s.includes(',') || s.includes('\n')) {
+          return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+      };
+      let csv = headers.map(esc).join(',') + '\n';
+      for (const r of rows) {
+        const line = headers.map(h => esc(r[h] === undefined ? '' : r[h])).join(',');
+        csv += line + '\n';
+      }
+      return csv;
+    }
+
+    processBtn.addEventListener('click', async () => {
+      try {
+        logArea.style.display = 'block';
+        // reset log for this run (but preserve previous content in case)
+        logArea.textContent = '';
+        appendLog('INFO: Process started');
+
+        // 1) quick checks
+        const filesSelected = (fileLNADJGNB && fileLNADJGNB.files && fileLNADJGNB.files.length);
+        //const sheetRows = readSheetRows();
+        //appendLog(`DEBUG: filesSelected=${!!filesSelected}, sheetRows=${sheetRows.length}`);
+
+        if (!filesSelected) {
+          appendLog('ERROR: CSV inputs must be selected (LNADJGNB). Aborting.');
+          return;
+        }
+        //if (!sheetRows.length) {
+        //  appendLog('ERROR: No rows found on the paste sheet. Aborting.');
+        //  return;
+        //}
+
+        // inside processBtn click handler after verifying fileLNADJGNB exists:
+        try {
+          appendLog('INFO: Starting LNADJGNB parse...');
+          const file = fileLNADJGNB && fileLNADJGNB.files && fileLNADJGNB.files[0];
+          if (!file) {
+            appendLog('ERROR: No LNADJGNB file found at processing time.');
+            return;
+          }
+
+          var { umrbts, pairs } = await parseLNADJGNBFile(file);
+          
+          // expose for later processing
+          window.umrbts = umrbts || [];
+          window.umrbtsPairs = pairs || []; // 2D array: [ [mrbts, adjGnbId, null], ... ]
+
+          appendLog(`INFO: umrbts length=${window.umrbts.length}; pairs length=${window.umrbtsPairs.length}`);
+          // console.log('umrbts', window.umrbts);
+          // console.log('umrbtsPairs', window.umrbtsPairs);
+        } catch (err) {
+          appendLog('ERROR: processing LNADJGNB -> ' + (err && err.message ? err.message : err));
+          console.error(err);
+        }
+
+
+        // build ENBID IN (...) clause from umrbts
+        const umrbtsArr = (window.umrbts || [])
+          .map(v => String(v).trim())
+          .filter(v => v !== '');
+
+        if (!umrbtsArr.length) {
+          appendLog('ERROR: umrbts is empty, cannot build ENBID filter.');
+          // stop here if you want to block the query when no data
+          // return;  // uncomment this line if inside an async handler
+        }
+        // console.log('umrbtsArr', umrbtsArr);
+
+        // // escape single quotes (defensive) and join as 'val1','val2',...
+        // const enbidList = umrbtsArr
+        //   .map(v => `'${v.replace(/'/g, "''")}'`)
+        //   .join(',');
+
+        appendLog('INFO: Getting coordinates, please wait..');
+
+        //-- query
+        const posturl = 'https://script.google.com/macros/s/AKfycbwopDfHqa1iQu1MyL3N60t9ByBh7uqQIQiNeIznG3q5TVLNbJDW-NaDJcQYIywBxwHjtw/exec';
+
+        fetch(posturl, {
+          redirect: "follow",
+          method: 'POST',
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: umrbtsArr })
+        })
+        .then(async res => {
+          console.log('HTTP status:', res.status, res.statusText);
+          const txt = await res.text();
+          // console.log('raw response text:', txt);          
+
+          // try parse JSON
+          let parsed;
+          try {
+            parsed = JSON.parse(txt);
+          } catch (e) {
+            console.error('Invalid JSON from server:', e, txt);
+            throw new Error('Invalid JSON from server');
+          }
+
+          // handle possible shapes:
+          // 1) server returned an array -> use it
+          if (Array.isArray(parsed)) return parsed;
+
+          // 2) server returned { status:'ok', result: [...] }
+          if (parsed && Array.isArray(parsed.result)) return parsed.result;
+
+          // 3) server returned the nested shape your code originally expected:
+          //    { body: { result: [ { results: [...] } ] } }
+          if (parsed?.body?.result?.[0]?.results) return parsed.body.result[0].results;
+
+          // fallback - nothing useful
+          console.warn('Unexpected response shape, returning empty array');
+          return [];
+        })
+        .then(data => {
+          try { DataUpdate(data); } catch (e) { console.error('DataUpdate error', e); }
+        })
+        .catch(err => {
+          console.error('Fetch/process error', err);
+          appendLog('ERROR: '+err.message);
+        });
+        //-- end of query
+
+
+
+
+      } catch (err) {
+        appendLog('ERROR: ' + (err && err.message ? err.message : String(err)));
+        console.error(err);
+      }
+    });
+    // ----------------- END REPLACEMENT -----------------
+
+
+    // Replace any existing addEventListener for downloadBtn with this single handler
+    // This uses window._NCR_COMBINED_CSV as primary CSV source, with fallbacks.
+    const downloadHandler = function () {
+      // prefer the combined csv stored by builder
+      let data = '';
+      if (typeof window._NCR_COMBINED_CSV === 'string' && window._NCR_COMBINED_CSV.length > 0) {
+        data = window._NCR_COMBINED_CSV;
+      }
+
+      if (!data) {
+        alert('No CSV data available for download.');
+        return;
+      }
+
+      // determine filename from #outname (supports input/value or element text)
+      var outnameEl = document.getElementById('outname');
+      var base = 'endc_export';
+      if (outnameEl) {
+        if (typeof outnameEl.value !== 'undefined' && outnameEl.value !== '') {
+          base = outnameEl.value;
+        } else if ((outnameEl.textContent || outnameEl.innerText || '') !== '') {
+          base = outnameEl.textContent || outnameEl.innerText;
+        }
+      }
+      base = String(base).trim();
+      if (base === '') base = 'endc_export';
+      base = base.replace(/[\\\/:*?"<>|]/g, '_');
+      var lower = base.toLowerCase();
+      if (lower.slice(-4) !== '.csv') base += '.csv';
+
+      // add BOM for Excel and create blob
+      var content = '\uFEFF' + data;
+      var blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+
+      // IE10+ fallback
+      if (navigator.msSaveBlob) {
+        navigator.msSaveBlob(blob, base);
+        return;
+      }
+
+      // standard download
+      var link = document.createElement('a');
+      var url = URL.createObjectURL(blob);
+      link.href = url;
+      link.setAttribute('download', base);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    };
+
+    // attach single handler safely: remove other handlers by replacing onclick
+    if (downloadBtn) {
+      // remove all existing event listeners by replacing onclick (simple and effective)
+      downloadBtn.onclick = downloadHandler;
+      // ensure button is enabled
+      downloadBtn.disabled = false;
+    } else {
+      console.warn('downloadBtn element not found. CSV prepared at window._NCR_COMBINED_CSV if available.');
+    }
+
+
+
+    // init
+    updateControls();
+    // logArea.textContent = (new Date()).toISOString() + ' INFO: Ready';
+    logArea.textContent = ' INFO: Ready';
+    logArea.style.display = 'block';
+
+
+    // Button color behavior manager
+    document.addEventListener('DOMContentLoaded', function () {
+      const processBtn = document.getElementById('processBtn');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const importPasteBtn = document.getElementById('importPasteBtn');
+      const clearSheetBtn = document.getElementById('clearSheetBtn');
+
+      if (!processBtn || !downloadBtn || !importPasteBtn) {
+        console.warn('Button color manager: some buttons missing, aborting color setup.');
+        return;
+      }
+
+
+
+      // });
+
+      // Reset after #clearSheetBtn clicked: back to initial state (step 1)
+      if (clearSheetBtn) {
+        clearSheetBtn.addEventListener('click', function () {
+          setInitialState();
+        });
+      }
+
+      // optional: ensure download changes are in sync if user clicks download directly
+      // if (downloadBtn) {
+      //   downloadBtn.addEventListener('click', function () {
+      //     // keep current visual logic (do nothing), but you could enforce a state here if desired
+      //   });
+      // }
+    });
+
+    //log area window
+    (function () {
+      document.addEventListener('DOMContentLoaded', () => {
+        const logArea = document.getElementById('logArea');
+        if (!logArea) {
+          console.warn('logArea not found');
+          return;
+        }
+
+        let overlay = null;
+        let modal = null;
+        let modalContent = null;
+        let originalParent = null;
+        let originalNextSibling = null;
+        let originalInlineStyle = '';
+
+        function openModal() {
+          if (overlay) return; // already open — do nothing
+
+          // remember where to put it back
+          originalParent = logArea.parentNode;
+          originalNextSibling = logArea.nextSibling; // may be null
+          originalInlineStyle = logArea.getAttribute('style') || '';
+
+          // create overlay
+          overlay = document.createElement('div');
+          overlay.id = 'logModalOverlay';
+          Object.assign(overlay.style, {
+            position: 'fixed',
+            inset: '0',
+            backgroundColor: 'rgba(0,0,0,0.45)',
+            zIndex: '2147483646',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            WebkitOverflowScrolling: 'touch'
+          });
+
+          // create modal container (flex column)
+          modal = document.createElement('div');
+          modal.id = 'logModal';
+          Object.assign(modal.style, {
+            width: '75vw',
+            height: '75vh',
+            maxWidth: 'calc(100vw - 40px)',
+            maxHeight: 'calc(100vh - 40px)',
+            background: '#ffffff',
+            borderRadius: '8px',
+            boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
+            overflow: 'hidden', // let inner content scroll
+            zIndex: '2147483647',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+          });
+
+          // content wrapper inside modal to hold the real logArea
+          modalContent = document.createElement('div');
+          modalContent.id = 'logModalContent';
+          Object.assign(modalContent.style, {
+            flex: '1 1 auto',
+            minHeight: '0',        // important for proper flex child scrolling
+            overflow: 'hidden',    // logArea will handle its own scrolling
+            padding: '12px',
+            boxSizing: 'border-box'
+          });
+
+          // ensure clicks inside modalContent do not close the overlay
+          modalContent.addEventListener('click', (e) => e.stopPropagation());
+
+          // Move the real logArea into the modalContent
+          modal.appendChild(modalContent);
+          modalContent.appendChild(logArea);
+
+          // Ensure logArea fills modalContent and is scrollable and close to modal height
+          Object.assign(logArea.style, {
+            width: '100%',
+            height: '97%',
+            minHeight: '0',      // allow flex to size it correctly
+            boxSizing: 'border-box',
+            overflow: 'auto',
+            display: 'block'
+          });
+
+          // clicking overlay (outside modal) closes it
+          overlay.addEventListener('click', onOverlayClick);
+          // pressing Escape closes
+          window.addEventListener('keydown', onKeyDown);
+
+          // add to document
+          document.body.appendChild(overlay);
+          document.body.appendChild(modal); // append modal to body (modal contains modalContent -> logArea)
+          // actually put overlay behind modal visually by placing overlay first, then modal on top
+          overlay.appendChild(modal); // move modal into overlay (keeps DOM tidy)
+
+          // prevent body scroll while modal open
+          document.documentElement.style.overflow = 'hidden';
+          document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+          if (!overlay) return;
+
+          overlay.removeEventListener('click', onOverlayClick);
+          window.removeEventListener('keydown', onKeyDown);
+
+          // restore logArea to original position
+          if (originalParent) {
+            if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
+              originalParent.insertBefore(logArea, originalNextSibling);
+            } else {
+              originalParent.appendChild(logArea);
+            }
+          }
+
+          // restore inline style
+          if (originalInlineStyle === '') logArea.removeAttribute('style');
+          else logArea.setAttribute('style', originalInlineStyle);
+
+          // clean DOM
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+
+          // reset variables
+          overlay = null;
+          modal = null;
+          modalContent = null;
+          originalParent = null;
+          originalNextSibling = null;
+          originalInlineStyle = '';
+
+          // restore body scroll
+          document.documentElement.style.overflow = '';
+          document.body.style.overflow = '';
+        }
+
+        function onOverlayClick(/*e*/) {
+          closeModal();
+        }
+
+        function onKeyDown(e) {
+          if (e.key === 'Escape' || e.key === 'Esc') {
+            closeModal();
+          }
+        }
+
+        // Click handler: open modal only if not already open.
+        // Also ignore clicks on interactive elements inside logArea (links/buttons/inputs).
+        logArea.addEventListener('click', function (e) {
+          // If overlay exists modal is already open; do nothing.
+          if (overlay) return;
+
+          const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+          if (tag === 'a' || tag === 'button' || tag === 'input' || tag === 'textarea') return;
+
+          openModal();
+        });
+
+        // Optional: close on Escape when focus is within logArea (also handled globally)
+        // No further actions needed.
+      });
+    })();
+
+
+
   </script>
-  
+
+
 </body>
+
 </html>
