@@ -461,6 +461,15 @@
         #replayFadeCover {
             pointer-events: none;
         }
+
+        /* --- compact playback controls (small blue buttons, auto-width) --- */
+        #overlayPBRew,#overlayPBFwd {
+            background: transparent !important;
+        }
+        #overlayPause {
+            width: 80px !important;
+            height: 36px !important;
+        }
     </style>
 </head>
 
@@ -533,12 +542,21 @@
                 <button id="overlayLoad" class="ov-btn">Load</button>
                 <button id="overlayRecord" class="ov-btn">Record</button>
                 <button id="overlayReplay" class="ov-btn" hidden>Replay</button>
+                <!-- STATIC playback controls (placed next to Replay) -->
+                <button id="overlayPause" class="ov-btn compact-btn" hidden>Pause</button>
+
+                <label id="overlayPBAuto" style="display:none; align-items:center; gap:6px; margin-bottom: 15px; margin-left:6px;">
+                <input id="overlayAutoChk" type="checkbox" style="margin:0 4px 0 0;"> Auto
+                </label>
+
+                <button id="overlayPBRew" class="ov-btn compact-btn" hidden title="Slower">◀</button>
+                <button id="overlayPBFwd" class="ov-btn compact-btn" hidden title="Faster">▶</button>
 
 
                 <button id="overlayOpenView" class="ov-btn" hidden>View</button>
                 <button id="overlayRotate" class="ov-btn" hidden>Rotate</button>
                 <!-- Zoom slider placed next to View button -->
-                <label for="zoomSlider" class="small-muted"
+                <label id="zoomlabel" for="zoomSlider" class="small-muted"
                     style="margin:6px 6px 0 6px; font-size:0.82rem;">Zoom</label>
                 <input id="zoomSlider" class="zoom-slider" type="range" min="0.25" max="4" step="0.01" value="1"
                     title="Zoom" />
@@ -589,6 +607,7 @@
         function formatNumber(v) { return (Math.round(v * 100) / 100).toFixed(2); }
         function approxEqual(a, b, tol = 1) { return Math.abs(a - b) <= tol; }
 
+        
         // ======= IndexedDB helpers (unchanged) =======
         function openDB() {
             return new Promise((resolve, reject) => {
@@ -1369,9 +1388,36 @@
 
 
         // Continue pressed: capture vertical difference (ydown) and prepare next cycle
-        btnContinue.addEventListener('click', () => {
+        btnContinue.addEventListener('click', async () => {
             // Only meaningful during initial-collection phase
             if (recordState.mode !== 'recording') return;
+
+            // --- fade to black for recording-continue (100ms) ---
+            let fadeCover = document.getElementById('replayFadeCover');
+            if (!fadeCover) {
+            fadeCover = document.createElement('div');
+            fadeCover.id = 'replayFadeCover';
+            fadeCover.style.position = 'fixed';
+            fadeCover.style.left = '0';
+            fadeCover.style.top = '0';
+            fadeCover.style.width = '100%';
+            fadeCover.style.height = '100%';
+            fadeCover.style.background = '#000';
+            fadeCover.style.pointerEvents = 'none';
+            fadeCover.style.zIndex = 999998;
+            fadeCover.style.opacity = '0';
+            fadeCover.style.transition = 'opacity 100ms linear';
+            document.body.appendChild(fadeCover);
+            }
+            try { fadeCover.style.opacity = '1'; } catch (e) { /* ignore */ }
+            await new Promise(r => setTimeout(r, 120)); // wait ~100ms fade
+            // --- end fade-in ---
+
+            // restore after 200ms (short delay so next prompt is readable)
+            setTimeout(() => {
+            try { fadeCover.style.opacity = '0'; } catch (e) { /* ignore */ }
+            }, 100);
+
             if (recordState.phase === 'collectInitials') {
                 // capture the current preview position as an initial for currentRow
                 const h = preview.hOffset || 0, v = preview.vOffset || 0, sc = preview.scale || 1;
@@ -1403,6 +1449,8 @@
             }
 
             // If in captureSegments phase: Continue is not used (ignore)
+            
+
         });
 
 
@@ -1458,53 +1506,115 @@
             });
         }
 
-        // animate property with RAF - returns promise
-        // Replace previous animateProperty with this version.
-        // It checks recordState.replayController.skipSegment to abort early.
-        // Replace existing animateProperty with this version
-        // Replace or update your animateProperty implementation to include this line:
-        // pause-aware animateProperty
-        function animateProperty(durationMs, onProgress) {
-            return new Promise(resolve => {
-                if (!recordState.replayController) recordState.replayController = { skipSegment: false, aborted: false };
-
-                let elapsed = 0;                    // time progressed while NOT paused
-                let lastTick = performance.now();   // last timestamp we observed
-
-                function step() {
-                    // abort conditions
-                    if (!recordState.replaying || (recordState.replayController && recordState.replayController.aborted)) {
-                        try { onProgress(1); } catch (e) { }
-                        recordState.currentSegmentProgress = 1;
-                        return resolve('aborted');
-                    }
-
-                    // skip-segment requested: complete immediately
-                    if (recordState.replayController && recordState.replayController.skipSegment) {
-                        try { onProgress(1); } catch (e) { }
-                        recordState.replayController.skipSegment = false;
-                        recordState.currentSegmentProgress = 1;
-                        return resolve('skipped');
-                    }
-
-                    const now = performance.now();
-                    // only accumulate elapsed while NOT paused
-                    if (!recordState.pausedReplay) {
-                        elapsed += (now - lastTick);
-                    }
-                    lastTick = now;
-
-                    // compute progress from elapsed
-                    const p = Math.min(1, elapsed / durationMs);
-                    try { onProgress(p); } catch (e) { }
-
-                    if (p >= 1) return resolve('done');
-                    requestAnimationFrame(step);
-                }
-
-                requestAnimationFrame(step);
-            });
+        // --- REPLACE existing animateProperty with this block ---
+        function easeInOutCubic(t){
+        // smooth ease-in-out cubic
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
         }
+        
+        // --- REPLACE existing animateProperty with this block ---
+        function animateProperty(durationMs, onProgress) {
+        return new Promise(resolve => {
+            if (!recordState.replayController) recordState.replayController = { skipSegment: false, aborted: false };
+
+            // how long (ms) to apply easing at start and end
+            const edgeEaseMs = 1000; // 1 second start + 1 second end
+
+            // curve power for easing (cubic gives smooth accel/decel)
+            const m = 3;
+
+            // defensive immediate-complete
+            if (durationMs <= 0) {
+            try { onProgress(1); } catch (e) { /* ignore */ }
+            recordState.currentSegmentProgress = 1;
+            return resolve('done');
+            }
+
+            // fraction of whole duration spent easing at each edge
+            let alpha = edgeEaseMs / durationMs;
+            // clamp alpha to sensible range (prevent numerical issues if edgeEaseMs > durationMs)
+            if (alpha >= 0.49) alpha = 0.49;
+
+            // for very short durations: fallback to symmetric ease-in-out
+            const useFullEaseFallback = (durationMs <= 2 * edgeEaseMs);
+
+            // Precompute S (total fraction of position consumed by one easing edge)
+            // Derived so that derivative at the end of easing equals the constant middle speed.
+            // S = alpha / ( m*(1 - 2*alpha) + 2*alpha )
+            const S = useFullEaseFallback ? null : (alpha / (m * (1 - 2 * alpha) + 2 * alpha));
+            const Lm = 1 - 2 * alpha; // middle fraction length
+            const k = useFullEaseFallback ? null : (m * S / alpha); // middle slope (derivative) = constant speed
+
+            let elapsed = 0;
+            let lastTick = performance.now();
+
+            function step() {
+            // abort
+            if (!recordState.replaying || (recordState.replayController && recordState.replayController.aborted)) {
+                try { onProgress(1); } catch (e) { /* ignore */ }
+                recordState.currentSegmentProgress = 1;
+                return resolve('aborted');
+            }
+
+            // skip
+            if (recordState.replayController && recordState.replayController.skipSegment) {
+                try { onProgress(1); } catch (e) { /* ignore */ }
+                recordState.replayController.skipSegment = false;
+                recordState.currentSegmentProgress = 1;
+                return resolve('skipped');
+            }
+
+            const now = performance.now();
+            if (!recordState.pausedReplay) elapsed += (now - lastTick);
+            lastTick = now;
+
+            const pRaw = Math.min(1, elapsed / durationMs); // linear time progress 0..1
+
+            if (useFullEaseFallback) {
+                // Short total duration: symmetric ease-in-out across whole motion (smooth but no constant middle)
+                // Use cubic ease-in/out across full 0..1
+                const half = 0.5;
+                let eased;
+                if (pRaw < half) {
+                eased = 0.5 * Math.pow(pRaw / half, m);
+                } else {
+                eased = 0.5 + 0.5 * (1 - Math.pow((1 - pRaw) / half, m));
+                }
+                try { onProgress(eased); } catch (e) { /* ignore */ }
+                recordState.currentSegmentProgress = pRaw;
+                if (pRaw >= 1) return resolve('done');
+                return requestAnimationFrame(step);
+            }
+
+            // Normal case: piecewise function that creates:
+            // start ease (0..alpha) -> middle linear (alpha..1-alpha) -> end ease (1-alpha..1)
+            let easedP;
+            if (pRaw <= alpha) {
+                // start easing: easedP = S * (pRaw/alpha)^m
+                const local = pRaw / alpha;
+                easedP = S * Math.pow(local, m);
+            } else if (pRaw >= 1 - alpha) {
+                // end easing: easedP = 1 - S * ((1 - pRaw)/alpha)^m
+                const local = (1 - pRaw) / alpha;
+                easedP = 1 - S * Math.pow(local, m);
+            } else {
+                // middle constant-speed segment: linear from S to 1 - S with slope k
+                easedP = S + k * (pRaw - alpha);
+            }
+
+            try { onProgress(easedP); } catch (e) { /* ignore */ }
+            recordState.currentSegmentProgress = pRaw;
+
+            if (pRaw >= 1) return resolve('done');
+            requestAnimationFrame(step);
+            }
+
+            requestAnimationFrame(step);
+        });
+        }
+
+
+
 
 
         // ---------- Front-layer helpers ----------
@@ -1536,13 +1646,49 @@
             previewImgFront.style.clipPath = 'inset(0 100% 0 0)';
         }
 
+        function elementhide(element){
+            element.hidden = true;
+            element.setAttribute('aria-hidden', 'true');     
+        }
 
+        function elementshow(element){
+            element.hidden = false;
+            element.removeAttribute('aria-hidden');
+        }
+
+        function hideui(){
+            const zoomlabel = $('#zoomlabel');
+            const btnPause = $('#overlayPause');
+
+            elementhide(overlayRecord);            
+            elementhide(zoomSlider);    
+            elementhide(zoomlabel);    
+            elementhide(overlayLoad);    
+            // elementhide(btnPause);    
+            // elementhide(fileLabel);     
+                               
+        }
+
+        function showui(){
+            const zoomlabel = $('#zoomlabel');
+            const btnPause = $('#overlayPause');
+
+            elementshow(overlayRecord);            
+            elementshow(zoomSlider);   
+            elementshow(zoomlabel);    
+            elementshow(overlayLoad);    
+            // elementshow(btnPause);    
+            // elementshow(fileLabel);                         
+        }
 
         async function startReplay() {
             fileSettings.playbackspeed = fileSettings.playbackspeed || 100;
             fileSettings.autoplayback = !!fileSettings.autoplayback;
 
             if (!fileSettings.segments || !fileSettings.segments.length) return alert('No recorded segments to replay.');
+
+            
+
             // prepare UI + lock inputs
             recordState.replaying = true;
             recordState.pausedReplay = false;
@@ -1551,159 +1697,42 @@
             preview.lockZoom = true;
             preview.lockVertical = true;
 
-            // create pause button if missing
-            let btnPause = $('#overlayPause');
-            if (!btnPause) {
-                btnPause = document.createElement('button');
-                btnPause.id = 'overlayPause';
-                btnPause.className = 'ov-btn';
-                btnPause.textContent = 'Pause';
-                overlayReplay.parentNode.insertBefore(btnPause, overlayReplay.nextSibling);
-            }
-            btnPause.hidden = false;
 
+            // --- show / initialize static playback controls (no dynamic creation) ---
+            const btnPause = document.getElementById('overlayPause');
+            if (btnPause) btnPause.hidden = false;
 
-            // --- overlay playback controls: wrapper, auto checkbox, rewind & fast-forward ---
-            // show/create wrapper
-            let pbWrapper = document.getElementById('overlayPBWrapper');
-            if (!pbWrapper) {
-                pbWrapper = document.createElement('div');
-                pbWrapper.id = 'overlayPBWrapper';
-                pbWrapper.style.position = 'fixed';
-                pbWrapper.style.right = '8px';
-                pbWrapper.style.bottom = '52px'; // above recTimer
-                pbWrapper.style.zIndex = 999999;
-                pbWrapper.style.display = 'flex';
-                pbWrapper.style.flexDirection = 'column';
-                pbWrapper.style.gap = '6px';
-                pbWrapper.style.alignItems = 'flex-end';
-                // no background on wrapper (transparent)
-                pbWrapper.style.background = 'transparent';
-                document.body.appendChild(pbWrapper);
+            const pbRew = document.getElementById('overlayPBRew');
+            const pbFwd = document.getElementById('overlayPBFwd');
+            const pbAuto = document.getElementById('overlayPBAuto');
 
-                // Auto checkbox label
-                const pbAuto = document.createElement('label');
-                pbAuto.id = 'overlayPBAuto';
-                pbAuto.style.display = 'flex';
-                pbAuto.style.alignItems = 'center';
-                pbAuto.style.gap = '6px';
-                pbAuto.style.padding = '4px';
-                pbAuto.style.background = 'transparent'; // transparent background
-                pbAuto.style.color = ''; // inherit text color
-                pbAuto.innerHTML = `<input id="overlayAutoChk" type="checkbox" style="margin:0 4px 0 0;"> Auto`;
-                
-
-                // row for buttons
-                const row = document.createElement('div');
-                row.style.display = 'flex';
-                row.style.gap = '6px';                
-                pbWrapper.appendChild(row);
-                row.prepend(pbAuto);
-                
-                const pbRew = document.createElement('button');
-                pbRew.id = 'overlayPBRew';
-                pbRew.className = 'ov-btn';
-                pbRew.textContent = '◀◀';
-                // transparent style (no visible background)
-                pbRew.style.background = 'transparent';
-                pbRew.style.border = 'none';
-                pbRew.style.padding = '6px 8px';
-                pbRew.style.fontSize = '14px';
-                pbRew.style.cursor = 'pointer';
-                row.appendChild(pbRew);
-
-                const pbFwd = document.createElement('button');
-                pbFwd.id = 'overlayPBFwd';
-                pbFwd.className = 'ov-btn';
-                pbFwd.textContent = '▶▶';
-                pbFwd.style.background = 'transparent';
-                pbFwd.style.border = 'none';
-                pbFwd.style.padding = '6px 8px';
-                pbFwd.style.fontSize = '14px';
-                pbFwd.style.cursor = 'pointer';
-                row.appendChild(pbFwd);
-
-
-                // auto checkbox handler
-                const chk = document.getElementById('overlayAutoChk');
-                if (chk) {
-                    chk.checked = !!fileSettings.autoplayback;
-                    chk.addEventListener('change', (e) => {
-                        fileSettings.autoplayback = !!e.target.checked;
-                        if (typeof saveRecord === 'function') saveRecord();
-                        const fl = document.getElementById('fileLabel'); if (fl) { const prev = fl.textContent; fl.style.color = 'red'; fl.textContent = fileSettings.autoplayback ? 'Auto ON' : 'Auto OFF'; setTimeout(()=>{ fl.style.color=''; fl.textContent = prev; }, 2000); }
-                    });
-                }
-            } else {
-                // make visible (if previously hidden)
-                pbWrapper.style.display = 'flex';
-                const chk = document.getElementById('overlayAutoChk');
-                if (chk) chk.checked = !!fileSettings.autoplayback;
-            }
-
-            
-            // --- create playback control UI (rewind / fast-forward + auto checkbox) ---
-            let pbRew = $('#overlayPBRew'), pbFwd = $('#overlayPBFwd'), pbAuto = $('#overlayPBAuto');
-            if (!pbRew) {
-            // container wrapper: position right above #recTimer (absolute bottom-right)
-            const wrapper = document.createElement('div');
-            wrapper.id = 'overlayPBWrapper';
-            wrapper.style.position = 'fixed';
-            wrapper.style.right = '8px';
-            wrapper.style.bottom = '52px'; // slightly above #recTimer
-            wrapper.style.zIndex = 999999;
-            wrapper.style.display = 'flex';
-            wrapper.style.flexDirection = 'column';
-            wrapper.style.gap = '6px';
-            wrapper.style.alignItems = 'flex-end';
-            document.body.appendChild(wrapper);
-
-            // create small buttons row first (so we can place auto inside it)
-            const row = document.createElement('div');
-            row.style.display = 'flex';
-            row.style.gap = '6px';
-            row.style.alignItems = 'center';
-            pbWrapper.appendChild(row);
-
-            // auto checkbox + label — put inside the row so it appears left of rewind
-            pbAuto = document.createElement('label');
-            pbAuto.id = 'overlayPBAuto';
-            pbAuto.style.display = 'flex';
-            pbAuto.style.alignItems = 'center';
-            pbAuto.style.gap = '6px';
-            pbAuto.style.background = 'rgba(0,0,0,0.55)';
-            pbAuto.style.padding = '6px';
-            pbAuto.style.borderRadius = '8px';
-            pbAuto.style.color = '#eaf2ff';
-            pbAuto.innerHTML = `<input type="checkbox" id="overlayAutoChk" style="margin:0 4px 0 0;"> Auto`;
-            // insert as the first item in the row (left of rewind)
-            row.prepend(pbAuto);
-
-            // rewind button (to the right of Auto)
-            pbRew = document.createElement('button');
-            pbRew.id = 'overlayPBRew';
-            pbRew.className = 'ov-btn';
-            pbRew.title = 'Slower (increase delays/durations)';
-            pbRew.textContent = '◀◀';
-            row.appendChild(pbRew);
-
-            // forward button
-            pbFwd = document.createElement('button');
-            pbFwd.id = 'overlayPBFwd';
-            pbFwd.className = 'ov-btn';
-            pbFwd.title = 'Faster (decrease delays/durations)';
-            pbFwd.textContent = '▶▶';
-            row.appendChild(pbFwd);
-
-
-            // save references for later
-            pbRew = $('#overlayPBRew'); pbFwd = $('#overlayPBFwd'); pbAuto = $('#overlayPBAuto');
-            }
-
-            // show them
             if (pbRew) pbRew.hidden = false;
             if (pbFwd) pbFwd.hidden = false;
-            if (pbAuto) pbAuto.style.display = 'flex';
+            if (pbAuto) pbAuto.style.display = 'inline-flex';
+
+            // wire the checkbox ONCE (avoid duplicate listeners)
+            const chk = document.getElementById('overlayAutoChk');
+            if (chk) {
+            chk.checked = !!fileSettings.autoplayback;
+            if (!chk._wired) {
+                chk.addEventListener('change', (e) => {
+                fileSettings.autoplayback = !!e.target.checked;
+                if (typeof saveRecord === 'function') saveRecord();
+                const fl = document.getElementById('fileLabel');
+                if (fl) {
+                    const prev = fl.textContent;
+                    fl.style.color = 'red';
+                    fl.textContent = fileSettings.autoplayback ? 'Auto ON' : 'Auto OFF';
+                    setTimeout(()=>{ fl.style.color = ''; fl.textContent = prev; }, 2000);
+                }
+                });
+                chk._wired = true;
+            }
+            }
+
+
+
+            hideui();
 
             // Flash helper that resets the timeout on repeated clicks.
             // Shows `text` immediately and reverts to the real filename only ms after last call.
@@ -1765,16 +1794,11 @@
             });
 
             // auto checkbox wiring
-            const chk = document.getElementById('overlayAutoChk');
+            // const chk = document.getElementById('overlayAutoChk');
             if (chk) {
             // initialize from fileSettings
             chk.checked = !!fileSettings.autoplayback;
-            chk.addEventListener('change', (e) => {
-                fileSettings.autoplayback = !!e.target.checked;
-                if (typeof saveRecord === 'function') saveRecord();
-                // briefly flash to show state
-                flashFileLabelTemp(fileSettings.autoplayback ? 'Auto ON' : 'Auto OFF');
-            });
+
             }
 
 
@@ -1845,11 +1869,20 @@
                     ev.stopPropagation(); ev.preventDefault();
                     if (!recordState.replayController) recordState.replayController = {};
                     recordState.replayController.skipSegment = true;
-                    // If replay is currently paused and waiting for user input, resolve that wait immediately.
-                    if (recordState._resolveManualContinue) {
-                        try { recordState._resolveManualContinue(); } catch (e) { }
+
+                    // Mark that a programmatic "continue" was requested so any future manual wait will auto-resolve.
+                    // Also call the resolver now if it already exists.
+                    if (!recordState.replayController) recordState.replayController = {};
+                    recordState.replayController.autoContinueRequested = true;
+
+                    if (typeof recordState._resolveManualContinue === 'function') {
+                        try { recordState._resolveManualContinue(); } catch (e) { /* ignore */ }
                         recordState._resolveManualContinue = null;
+                        // we handled it immediately — clear the request flag
+                        recordState.replayController.autoContinueRequested = false;
                     }
+
+
                     hideBlink();
                 };
                 blinkEl.addEventListener('pointerdown', blinkHandler);
@@ -2025,9 +2058,9 @@
                                 if (preview.hOffset > triggerStart) {
                                     revealPct = ((preview.hOffset - triggerStart) / Math.max(1, revealStartPx)) * (preview.containerW / scaledW) * 50; // 0..50
                                     if (revealPct < 0) revealPct = 0;
-                                    if (revealPct >= 10 * (preview.containerW / scaledW)) {
-                                        // revealPct = 50;
-                                        console.log('');
+                                    if (revealPct >= 49 * (preview.containerW / scaledW)) {
+                                        revealPct = 50;
+                                        //console.log('');
                                     }
                                 }
 
@@ -2183,10 +2216,24 @@
                     }
 
                 } else {
-                    // immediate set
-                    preview.hOffset = animTo;
-                    updatePreviewTransform();
+                    // immediate set — but smoothly "snap" if the distance is noticeable
+                    const cur = (preview.hOffset || 0);
+                    const snapDelta = Math.abs(cur - animTo);
+
+                    if (snapDelta > 8) { // threshold in pixels - tweak if you want more/less sensitivity
+                        // quick smooth snap (180ms)
+                        await animateProperty(180, (easedP) => {
+                        // animateProperty already passes eased progress; use it linearly here as interpolation factor
+                        preview.hOffset = cur + (animTo - cur) * easedP;
+                        updatePreviewTransform();
+                        });
+                    } else {
+                        // tiny difference — just set immediately
+                        preview.hOffset = animTo;
+                        updatePreviewTransform();
+                    }
                 }
+
 
                 // ensure blink hidden
                 hideBlink();
@@ -2257,6 +2304,12 @@
                             recordState.pausedReplay = false;
                             resolve();
                         };
+                        // If a programmatic auto-continue was requested earlier (e.g. double-tap), resolve immediately.
+                        if (recordState.replayController && recordState.replayController.autoContinueRequested) {
+                            try { recordState._resolveManualContinue(); } catch (e) { /* ignore */ }
+                            recordState.replayController.autoContinueRequested = false;
+                        }
+
                     });
                 }
                 
@@ -2320,7 +2373,8 @@
 
 
 
-        // Replace the existing stopReplay() with this safer version
+        
+        // REPLACE existing stopReplay() with this version
         function stopReplay() {
             // mark stop flags first
             recordState.replaying = false;
@@ -2335,20 +2389,27 @@
             // reset timer UI
             setRecTimerText('0.0s', 'paused');
 
-            // hide pause button if exists
-            const btnPause = $('#overlayPause');
-            if (btnPause) {
-                btnPause.hidden = true;
-                btnPause.textContent = 'Pause'; // reset label so next start shows Pause
-            }
+            // // hide pause button if exists
+            // const btnPause = $('#overlayPause');
+            // if (btnPause) {
+            //     btnPause.hidden = true;
+            //     btnPause.textContent = 'Pause'; // reset label so next start shows Pause
+            // }
 
-            // hide playback controls if present
-            const pbRew_el = document.getElementById('overlayPBRew');
-            const pbFwd_el = document.getElementById('overlayPBFwd');
-            const pbWrapper = document.getElementById('overlayPBWrapper');
-            if (pbRew_el) pbRew_el.hidden = true;
-            if (pbFwd_el) pbFwd_el.hidden = true;
-            if (pbWrapper) pbWrapper.style.display = 'none';
+            // // hide playback controls if present
+            // const pbRew_el = document.getElementById('overlayPBRew');
+            // const pbFwd_el = document.getElementById('overlayPBFwd');
+            // const pbWrapper = document.getElementById('overlayPBWrapper');
+            // if (pbRew_el) pbRew_el.hidden = true;
+            // if (pbFwd_el) pbFwd_el.hidden = true;
+            // if (pbWrapper) pbWrapper.style.display = 'none';
+
+
+            const btnPause = document.getElementById('overlayPause'); if (btnPause) btnPause.hidden = true; btnPause.textContent = 'Pause'; 
+            const pbRew = document.getElementById('overlayPBRew'); if (pbRew) pbRew.hidden = true;
+            const pbFwd = document.getElementById('overlayPBFwd'); if (pbFwd) pbFwd.hidden = true;
+            const pbAuto = document.getElementById('overlayPBAuto'); if (pbAuto) pbAuto.style.display = 'none';
+
 
 
             // hide any temporary UI left over from replay
@@ -2357,52 +2418,220 @@
             const fade = document.getElementById('replayFadeCover');
             if (fade) { fade.style.opacity = '0'; fade.style.pointerEvents = 'none'; }
 
-            // clear any controller flags and request abort
+            // clear and abort any replay controller flags
             if (!recordState.replayController) recordState.replayController = {};
             recordState.replayController.skipSegment = false;
             recordState.replayController.aborted = true;
+            // then remove it to ensure a clean state for next start
+            recordState.replayController = null;
 
-            // If we are currently waiting for a user tap (the code attached once handlers),
-            // dispatch a synthetic pointerdown so the waiting Promise resolves and the replay loop can exit.
-            try {
-                previewCanvas.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-                viewCanvas.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-                // also dispatch a keydown for Enter/Space fallback (some environments)
-                document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-            } catch (e) {
-                // ignore if synthetic events not allowed
+            // cancel/resolve any outstanding manual-continue resolver to avoid hanging promises
+            if (typeof recordState._resolveManualContinue === 'function') {
+                try { recordState._resolveManualContinue(); } catch (e) { /* ignore */ }
+                recordState._resolveManualContinue = null;
             }
 
-            // --- CLEANUP POINTER STATE (fix: leftover pointers causing ghost-zoom/pinch) ---
+            // reset replay-related flags
+            recordState.replayRecalcOnResume = false;
+            recordState.currentSegmentProgress = 0;
+
+            // hide/remove reveal line if present
             try {
-                // release any pointer captures and clear preview active pointers
-                for (const id of activePointers.keys()) {
-                    try { previewCanvas.releasePointerCapture(id); } catch (e) { /* ignore */ }
+                const rl = document.getElementById('previewRevealLine');
+                if (rl) {
+                    // prefer removing to avoid stale position on next replay
+                    if (rl.parentNode) rl.parentNode.removeChild(rl);
                 }
-                activePointers.clear();
             } catch (e) { /* ignore */ }
 
-            // reset preview internal flags that control dragging/pinch
-            preview.dragging = false;
-            preview.lastPointer = null;
-            preview._pinchBase = null;
+            // hide front preview and clear awaiting-tap flag
+            try { hideFront(); } catch (e) { /* ignore */ }
+            frontAwaitingTap = false;
 
-            // also clean view pointer state just in case
+            // restore preview to initial start (prefer recorded initial[0], fallback to stored start offsets)
             try {
-                for (const id of viewActivePointers.keys()) {
-                    try { viewCanvas.releasePointerCapture(id); } catch (e) { /* ignore */ }
+                const initials = (fileSettings.initials || []);
+                if (initials && initials.length) {
+                    const init = initials[0];
+                    preview.scale = (typeof init.scale !== 'undefined') ? init.scale : (fileSettings.startZoom || preview.scale);
+                    preview.hOffset = (typeof init.hOffset !== 'undefined') ? init.hOffset : (Number(fileSettings.startOffsetX) || 0);
+                    preview.vOffset = (typeof init.vOffset !== 'undefined') ? init.vOffset : (Number(fileSettings.startOffsetY) || 0);
+                } else {
+                    preview.scale = fileSettings.startZoom || fileSettings.zoom || preview.scale;
+                    preview.hOffset = Number(fileSettings.startOffsetX) || 0;
+                    preview.vOffset = Number(fileSettings.startOffsetY) || 0;
                 }
-                viewActivePointers.clear();
-            } catch (e) { /* ignore */ }
-            viewState._dragging = false;
-            viewState._lastPointer = null;
+            } catch (e) {
+                // defensive: if anything fails, fall back to zeroes
+                preview.hOffset = Number(fileSettings.startOffsetX) || 0;
+                preview.vOffset = Number(fileSettings.startOffsetY) || 0;
+            }
 
+            // force transform update so user immediately sees the reset position
+            updatePreviewTransform(true);
+            
+            showui();
         }
 
 
 
+
+        // ------------------ ADD: double-tap / double-click to skip-to-next-row during replay ------------------
+        // Right-half double trigger: removes reveal line, hides front and forces replay to skip/continue.
+        (function installDoubleTrigger() {
+        // small state for pointer double-tap detection
+        let lastTap = 0, lastTapX = 0, lastTapY = 0;
+        const DOUBLE_MS = 350;   // max ms between taps
+        const MAX_MOVE_PX = 50;  // allow small positional tolerance
+
+        function isRightHalf(el, clientX) {
+            const r = el.getBoundingClientRect();
+            const x = clientX - r.left;
+            return x >= (r.width / 2);
+        }
+
+        async function doDoubleAction(ev, el) {
+            if (!recordState || !recordState.replaying) return; // only during replay
+
+            // ensure right-half
+            if (!isRightHalf(el, ev.clientX)) return;
+
+            // remove reveal line if exists
+            try {
+                const rl = document.getElementById('previewRevealLine');
+                if (rl && rl.parentNode) rl.parentNode.removeChild(rl);
+            } catch (e) { /* ignore */ }
+
+            // hide front immediately
+            try { hideFront(); } catch (e) { /* ignore */ }
+
+            // ensure replayController exists
+            if (!recordState.replayController) recordState.replayController = {};
+
+            // Create/get fadeCover
+            let fadeCover = document.getElementById('replayFadeCover');
+            if (!fadeCover) {
+                fadeCover = document.createElement('div');
+                fadeCover.id = 'replayFadeCover';
+                fadeCover.style.position = 'fixed';
+                fadeCover.style.left = '0';
+                fadeCover.style.top = '0';
+                fadeCover.style.width = '100%';
+                fadeCover.style.height = '100%';
+                fadeCover.style.background = '#000';
+                fadeCover.style.pointerEvents = 'none';
+                fadeCover.style.zIndex = 999998;
+                fadeCover.style.opacity = '0';
+                fadeCover.style.transition = 'opacity 100ms linear'; // 100ms fade
+                document.body.appendChild(fadeCover);
+            }
+
+            // Fade to black (100ms)
+            try { fadeCover.style.opacity = '1'; } catch (e) { /* ignore */ }
+            await new Promise(r => setTimeout(r, 120)); // wait slightly >100ms to be safe
+
+            // Decide behaviour depending on whether we are currently in delay or panning
+            const inDelay = !!(recordState.replayController && recordState.replayController.inDelay);
+
+            if (inDelay) {
+                // If we are in the 'delay' phase, DO NOT set skipSegment.
+                // Instead mark a request to advance to the next row but **respect the delay**.
+                recordState.replayController.requestAdvanceRow = true;
+                recordState.replayController.forceRespectDelay = true;
+            } else {
+                // If we are currently panning (duration active), we want to interrupt the pan and
+                // immediately start the flow to next row — keep the existing skip behavior.
+                recordState.replayController.skipSegment = true;
+            }
+
+            // Also mark that a programmatic "continue" was requested so any manual-wait resolves.
+            recordState.replayController.autoContinueRequested = true;
+            if (typeof recordState._resolveManualContinue === 'function') {
+                try { recordState._resolveManualContinue(); } catch (e) { /* ignore */ }
+                recordState._resolveManualContinue = null;
+                recordState.replayController.autoContinueRequested = false;
+            }
+
+            // Pick next initial and jump to it immediately (the jump happens under black)
+            try {
+                const nextInit = (function pickNextInit() {
+                if (!recordState || !Array.isArray(recordState.initials)) return null;
+                const curIdx = (typeof recordState.segmentIndex === 'number') ? recordState.segmentIndex : -1;
+                if (recordState.initials[curIdx + 1]) return recordState.initials[curIdx + 1];
+                if (recordState.initials[curIdx]) return recordState.initials[curIdx];
+                return recordState.initials[0] || null;
+                })();
+
+                if (nextInit) {
+                preview.scale = (typeof nextInit.scale !== 'undefined') ? nextInit.scale : preview.scale;
+                preview.hOffset = (typeof nextInit.hOffset !== 'undefined') ? nextInit.hOffset : preview.hOffset || 0;
+                preview.vOffset = (typeof nextInit.vOffset !== 'undefined') ? nextInit.vOffset : preview.vOffset || 0;
+                try { updatePreviewTransform(); } catch (e) { /* ignore */ }
+                }
+            } catch (err) {
+                console.warn('double-trigger: jump-to-next-initial failed', err);
+            }
+
+            // reveal after 200ms (per your request)
+            setTimeout(() => {
+                try { fadeCover.style.opacity = '0'; } catch (e) { /* ignore */ }
+
+                // Clear requestAdvanceRow flag after we've applied the jump (so the replay loop can handle it)
+                if (recordState.replayController) {
+                recordState.replayController.requestAdvanceRow = false;
+                // don't clear forceRespectDelay here; let the replay loop observe it for the upcoming delay.
+                }
+
+                // ensure previewRevealLine doesn't remain hidden unexpectedly (some flows re-create it)
+                try {
+                let rl = document.getElementById('previewRevealLine');
+                if (rl) rl.style.display = '';
+                } catch (e) { /* ignore */ }
+            }, 200);
+        }
+
+
+        // dblclick for mouse users (simple)
+        previewCanvas.addEventListener('dblclick', (e) => { doDoubleAction(e, previewCanvas); });
+        viewCanvas.addEventListener('dblclick', (e) => { doDoubleAction(e, viewCanvas); });
+
+        // pointerdown-based double-tap detection for touch (keeps it passive-friendly)
+        previewCanvas.addEventListener('pointerdown', (e) => {
+            // allow event to proceed normally for non-replay states; we only want to handle during replay
+            const now = performance.now();
+            const rect = previewCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            if (now - lastTap < DOUBLE_MS && Math.hypot(x - lastTapX, y - lastTapY) < MAX_MOVE_PX) {
+            // double-tap detected
+            doDoubleAction(e, previewCanvas);
+            lastTap = 0;
+            } else {
+            lastTap = now; lastTapX = x; lastTapY = y;
+            }
+        }, { passive: true });
+
+        // and same for viewCanvas
+        viewCanvas.addEventListener('pointerdown', (e) => {
+            const now = performance.now();
+            const rect = viewCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            if (now - lastTap < DOUBLE_MS && Math.hypot(x - lastTapX, y - lastTapY) < MAX_MOVE_PX) {
+            doDoubleAction(e, viewCanvas);
+            lastTap = 0;
+            } else {
+            lastTap = now; lastTapX = x; lastTapY = y;
+            }
+        }, { passive: true });
+
+        })(); 
+        // ------------------ END ADD ---------------------------------------------------------------------------
+
+
         // overlayReplay click handler (toggle start/stop)
         if (overlayReplay) {
+            
             overlayReplay.addEventListener('click', () => {
                 if (recordState.replaying) {
                     stopReplay();
@@ -2420,7 +2649,7 @@
             // toggle paused state
             recordState.pausedReplay = !recordState.pausedReplay;
             const btn = e.target;
-            btn.textContent = recordState.pausedReplay ? 'Resume' : 'Pause';
+            btn.textContent = recordState.pausedReplay ? 'Lanjut' : 'Pause';
 
             if (recordState.pausedReplay) {
                 // PAUSED: allow user panning (both horizontal & vertical), but keep zoom locked
