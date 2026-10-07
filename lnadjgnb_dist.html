@@ -933,12 +933,11 @@
         appendLog('INFO: Getting coordinates, please wait..');
 
         //-- query
-        const posturl = 'https://script.google.com/macros/s/AKfycbwopDfHqa1iQu1MyL3N60t9ByBh7uqQIQiNeIznG3q5TVLNbJDW-NaDJcQYIywBxwHjtw/exec';
+        const posturl = 'https://map3.dhani-wijaya-nokia.workers.dev/';
 
         fetch(posturl, {
-          redirect: "follow",
           method: 'POST',
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: umrbtsArr })
         })
         .then(async res => {
