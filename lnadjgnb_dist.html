@@ -525,8 +525,8 @@
         // Build lookup: ENBID -> { lat, lon }
         const lookup = {};
         for (const row of data) {
-          if (!row || row.ENBID === undefined) continue;
-          const id = String(row.ENBID);
+          if (!row || row.ENBID === undefined || row.ENBID === null) continue;
+          const id = String(row.ENBID).trim();
           const lon = Number(row.X_LONGITUDE);
           const lat = Number(row.Y_LATITUDE);
           lookup[id] = {
@@ -541,8 +541,8 @@
         let missingCoords = 0;
         // Update pairs with distances (meters). Keep two-decimal precision.
         for (let i = 0; i < pairsArr.length; i++) {
-          const left = String(pairsArr[i][0] || '');
-          const right = String(pairsArr[i][1] || '');
+          const left = String(pairsArr[i][0] || '').trim();
+          const right = String(pairsArr[i][1] || '').trim();
           const leftC = lookup[left];
           const rightC = lookup[right];
 
@@ -551,6 +551,9 @@
             pairsArr[i][2] = Math.round(dist * 100) / 100; // meters, 2 decimals
           } else {
             pairsArr[i][2] = ''; // leave blank if coords missing
+            if (missingCoords < 5) {
+              appendLog(`DEBUG MATCH FAIL: left="${left}" (in DB: ${!!leftC}), right="${right}" (in DB: ${!!rightC})`);
+            }
             missingCoords++;
           }
         }
@@ -920,25 +923,35 @@
 
         if (!umrbtsArr.length) {
           appendLog('ERROR: umrbts is empty, cannot build ENBID filter.');
-          // stop here if you want to block the query when no data
-          // return;  // uncomment this line if inside an async handler
         }
-        // console.log('umrbtsArr', umrbtsArr);
-
-        // // escape single quotes (defensive) and join as 'val1','val2',...
-        // const enbidList = umrbtsArr
-        //   .map(v => `'${v.replace(/'/g, "''")}'`)
-        //   .join(',');
 
         appendLog('INFO: Getting coordinates, please wait..');
+        // appendLog('--- DEBUG: IDs SENT TO WORKER ---');
+        // appendLog(JSON.stringify(umrbtsArr));
+        appendLog('---------------------------------');
+
+        // --- TRIGGER TEST API CALL FIRST ---
+        try {
+          fetch('https://map3.dhani-wijaya-nokia.workers.dev/', {
+            method: 'POST',
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: 'test_site_query' })
+          })
+          .then(res => res.json())
+          .then(testData => {
+            console.log('--- TEST API RESULT ---', testData);
+          })
+          .catch(err => console.error('Test API error:', err));
+        } catch (e) {
+          console.error('Test trigger failed', e);
+        }
 
         //-- query
-        const posturl = 'https://script.google.com/macros/s/AKfycbwopDfHqa1iQu1MyL3N60t9ByBh7uqQIQiNeIznG3q5TVLNbJDW-NaDJcQYIywBxwHjtw/exec';
+        const posturl = 'https://map3.dhani-wijaya-nokia.workers.dev/';
 
         fetch(posturl, {
-          redirect: "follow",
           method: 'POST',
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: umrbtsArr })
         })
         .then(async res => {
@@ -955,22 +968,26 @@
             throw new Error('Invalid JSON from server');
           }
 
-          // handle possible shapes:
-          // 1) server returned an array -> use it
+          // DEBUG TRACE CATCH
+          if (parsed && parsed.DEBUG_TRACE) {
+            appendLog('--- DEBUG TRACE ---');
+            appendLog('Status: ' + parsed.status);
+            appendLog('Sent Count: ' + parsed.sent_ids_count);
+            appendLog('Response: ' + parsed.response_text);
+            if (parsed.error) appendLog('Error: ' + parsed.error);
+            appendLog('-------------------');
+            return [];
+          }
+
           if (Array.isArray(parsed)) return parsed;
-
-          // 2) server returned { status:'ok', result: [...] }
           if (parsed && Array.isArray(parsed.result)) return parsed.result;
-
-          // 3) server returned the nested shape your code originally expected:
-          //    { body: { result: [ { results: [...] } ] } }
           if (parsed?.body?.result?.[0]?.results) return parsed.body.result[0].results;
 
-          // fallback - nothing useful
           console.warn('Unexpected response shape, returning empty array');
           return [];
         })
         .then(data => {
+          console.log('--- DEBUG: DATA RETURNED FROM WORKER ---', data);
           try { DataUpdate(data); } catch (e) { console.error('DataUpdate error', e); }
         })
         .catch(err => {
