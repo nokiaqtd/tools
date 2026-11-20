@@ -1,90 +1,2227 @@
 <!doctype html>
 <html lang="en">
+
 <head>
+  <script>
+  const APP_VERSION = "endc3h 261120"; // Type manually here
+  </script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>endc3g 260918</title>
-  <script>
-    // SVG-only favicon: white "N" on hsl(219 100% 50%) background
-    (function(){
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="N">
-        <rect width="100%" height="100%" fill="hsl(219 100% 50%)"/>
-        <!-- left vertical bar -->
-        <rect x="8" y="8" width="10" height="48" fill="#fff"/>
-        <!-- diagonal stroke (slanted middle) -->
-        <polygon points="18,8 30,8 46,56 34,56" fill="#fff"/>
-        <!-- right vertical bar -->
-        <rect x="46" y="8" width="10" height="48" fill="#fff"/>
-      </svg>`;
-
-      const url = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
-      document.querySelectorAll('link[rel~="icon"]').forEach(n => n.remove());
-      const link = document.createElement('link');
-      link.rel = 'icon';
-      link.type = 'image/svg+xml';
-      link.href = url;
-      document.head.appendChild(link);
-    })();
-  </script>
+  <title>endc3c</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    html, body { margin: 0; height: 100%; background: #0f62ff}
-    iframe { border: none; width: 100%; height: 100%; touch-action: auto; -ms-touch-action: auto; pointer-events: auto; -webkit-overflow-scrolling: touch; }
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --muted: #6b7280;
+      --accent: #0f62ff;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: Inter, system-ui, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      margin: 0;
+      background: var(--accent);
+      color: #0b1220
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 28px auto;
+      padding: 20px
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: 0 6px 18px rgba(11, 17, 32, 0.06);
+      padding: 20px
+    }
+
+    h2 {
+      margin: 0 0 6px;
+      font-size: 20px
+    }
+
+    .lead {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 13px
+    }
+
+    .row {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap
+    }
+
+    .column {
+      flex: 1;
+      min-width: 300px
+    }
+
+    input[type=file] {
+      display: block
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px
+    }
+
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: 0;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600
+    }
+
+    button.ghost {
+      background: #eef2ff;
+      color: var(--accent);
+      border: 1px solid rgba(15, 98, 255, 0.08)
+    }
+
+    .small {
+      font-size: 12px;
+      color: var(--muted)
+    }
+
+    .file-block {
+      background: #fbfdff;
+      border-radius: 8px;
+      padding: 12px;
+      border: 1px solid #eef6ff
+    }
+
+    label.small {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px
+    }
+
+    /* REPLACE existing #logArea block with this */
+    #logArea {
+      white-space: pre-wrap;
+      background: #0b1220;
+      color: #e6eefb;
+      /* padding: top right bottom left — bottom is larger for extra space inside the area */
+      padding: 12px 12px 28px 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+      /* margin below the log area so it doesn't touch modal footer */
+      margin-bottom: 16px;
+      /* allow it to grow to most of the viewport but leave room for modal header/footer */
+      max-height: calc(100vh - 160px);
+      height: auto;
+      overflow: auto;
+      font-family: monospace;
+      font-size: 12px;
+      display: none;
+      /* keep whatever show/hide behaviour you already use */
+      box-sizing: border-box;
+      /* include padding in the size calculation */
+    }
+
+
+    #warningsBlock {
+      margin-top: 10px;
+      white-space: pre-wrap;
+      background: #fff7f0;
+      border-radius: 6px;
+      padding: 8px;
+      border: 1px solid #ffd8b5;
+      color: #7a3b00;
+      max-height: 220px;
+      overflow: auto;
+      font-family: monospace
+    }
+
+    /* paste sheet */
+    .paste-area {
+      margin-top: 14px
+    }
+
+    .sheet-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px
+    }
+
+    .sheet-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden
+    }
+
+    .sheet-table th,
+    .sheet-table td {
+      padding: 8px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 13px;
+      text-align: left
+    }
+
+    .sheet-table th {
+      background: #f8fafc;
+      color: var(--muted);
+      font-weight: 600
+    }
+
+    .muted-note {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 6px
+    }
+
+    .right-col {
+      width: 300px
+    }
+
+    .input-text {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #e6eefb;
+      margin-top: 6px
+    }
+
+    .btn-ghost {
+      background: #fff;
+      border: 1px solid #e6eefb;
+      color: var(--accent);
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer
+    }
+
+    #pasteBox {
+      border: 3px solid #0d6efd;
+      /* brighter, thicker blue */
+      border-radius: 6px;
+      outline: none;
+      background-color: #f8fbff;
+      /* very light blue background for contrast */
+      box-shadow: 0 0 6px rgba(13, 110, 253, 0.6);
+      /* subtle glow */
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    #pasteBox:focus {
+      border-color: #0056b3;
+      /* darker blue on focus */
+      box-shadow: 0 0 8px rgba(0, 86, 179, 0.8);
+      /* stronger glow when focused */
+    }
+
+    #topVersion {
+      position: fixed;
+      top: 4px;
+      left: 8px;
+      color: #ffffff;
+      font-size: 11px;
+      z-index: 9999;
+      opacity: 0.8;
+    }
+
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .flex-1 {
+      flex: 1;
+    }
+
+    .paste-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #eef6ff;
+      margin-top: 8px;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+
+    .paste-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .row-counter {
+      margin-left: auto;
+      color: var(--muted);
+    }
+
+    .table-wrap {
+      margin-top: 10px;
+      overflow: auto;
+      border-radius: 8px;
+    }
+
+    #warningsArea {
+      margin-top: 12px;
+    }
+
+    #downloadBtn {
+      display: none;
+    }
+
+    .profile-label {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .profile-controls {
+      margin-top: 4px;
+      flex-direction: column;
+    }
+
+    .profile-btns {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .mt-8 {
+      margin-top: 8px;
+    }
+
+    #status {
+      margin-top: 12px;
+      color: var(--muted);
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+    }
   </style>
 </head>
+
 <body>
-  <!-- initial src is the base. script below will append the page query string if present -->
-  <iframe id="ndbFrame"
-    src=""
-    style="width:100%; height:100vh; border:0; display:block;"
-    allow="clipboard-read; clipboard-write self https://script.google.com; geolocation; microphone; camera; accelerometer; gyroscope; autoplay"
-    scrolling="no">
-  </iframe>
+	<div id="topVersion"></div>
+
+	<script>
+	  document.addEventListener('DOMContentLoaded', () => {
+		document.getElementById('topVersion').textContent = APP_VERSION;
+	  });
+	</script>
+
+  <div class="wrap">
+    <div class="card" role="main" aria-labelledby="title">
+      <h2 id="title">ENDC Tool</h2>
+      <p class="lead">Provide 4 mandatory inputs (LNCEL dump, IRFIM dump, LNHOIF dump, LNADJGNB dump)</p>
+
+      <div class="row">
+        <!-- left: file inputs + paste sheet -->
+        <div class="column">
+          <div class="file-block" aria-label="File inputs">
+            <div class="file-list">
+              <div class="file-item">
+                <label class="small" for="fileLNCEL">1) LNCEL dump (CSV)</label>
+                <input id="fileLNCEL" type="file" accept=".csv" />
+              </div>
+              <div class="file-item">
+                <label class="small" for="fileIRFIM">2) IRFIM dump (CSV)</label>
+                <input id="fileIRFIM" type="file" accept=".csv" />
+              </div>
+              <div class="file-item">
+                <label class="small" for="fileLNHOIF">3) LNHOIF dump (CSV)</label>
+                <input id="fileLNHOIF" type="file" accept=".csv" />
+              </div>
+              <div class="file-item">
+                <label class="small" for="fileLNADJGNB">4) LNADJGNB dump (CSV)</label>
+                <input id="fileLNADJGNB" type="file" accept=".csv" />
+              </div>
+            </div>
+
+            <div id="fileNotes" class="muted-note"></div>
+          </div>
+
+          <!-- modern paste sheet -->
+          <div class="paste-area">
+            <div class="sheet-controls">
+              <div class="flex-1">
+                <label class="small" for="pasteBox">Paste Data</label>
+                <div id="columns" class="muted-note">Default columns: <strong>LNBTS | sid_tgt | sid_src | NRBTS |
+                    cPlaneIpAddr | Remarks</strong></div>
+              </div>
+            </div>
+
+            <!-- paste textarea (hidden by default, but accessible) -->
+            <textarea id="pasteBox" class="paste-textarea" placeholder="Paste rows copied from Excel here then click Import Paste"></textarea>
+            <div class="paste-actions">
+              <button id="importPasteBtn" class="ghost btn-ghost" type="button">Import Paste</button>
+              <button id="clearSheetBtn" class="ghost btn-ghost" type="button">Clear Sheet</button>
+              <div class="small row-counter">Rows: <span id="sheetRowCount">0</span></div>
+            </div>
+
+            <!-- editable table -->
+            <div class="table-wrap">
+              <table id="sheetTable" class="sheet-table" role="table" aria-label="Paste sheet">
+                <thead id="thead">
+                  <tr>
+                    <th>LNBTS</th>
+                    <th>sid_tgt</th>
+                    <th>sid_src</th>
+                    <th>NRBTS</th>
+                    <th>IP (cPlaneIpAddr)</th>
+                    <th>Remarks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- rows inserted here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="warningsArea"></div>
+        </div>
+
+        <!-- right: controls + output name + log -->
+        <div class="right-col">
+          <!-- Hidden output filename and download button -->
+          <input id="outname" type="hidden" value="NCR_ENDC.csv" />
+          <button id="downloadBtn" type="button" aria-label="Download CSV"></button>
+          
+          <span class="small profile-label">Choose Profile</span>
+          <div class="controls profile-controls">
+            <div class="profile-btns">
+              <button id="processDefaultBtn" class="ghost" type="button" disabled>Default</button>
+              <button id="processRefarmingBtn" class="ghost" type="button" disabled>Refarming</button>
+              <button id="processCoverageBtn" class="ghost" type="button" disabled>Coverage</button>
+            </div>
+            <div class="small mt-8"></div>
+          </div>
+
+          <div id="status" class="small"></div>
+
+          <div id="logArea" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="small">ENDC UI — ready for wiring.</div>
+        <div class="small">Version: 1.0.0</div>
+      </div>
+    </div>
+  </div>
 
   <script>
-    (function(){
-      const base = 'https://script.google.com/macros/s/AKfycbzZrhl8eHw0fuWtN8HzXEM3ybam_l-ZohSuFEZ_ajzT6tQaBqziigpqH9EimEdmxMRI7Q/exec';
-      const pageQS = location.search || ''; // includes leading '?' when present
+    // Minimal UI helpers only (no processing logic).
+    // Intentionally small and simple: these enable/disable buttons and provide the paste->table helper.
+    // Placeholder comments show where your processing should be attached later.
 
-      // OPTION 1 (default): forward entire query string from parent to iframe
-      let iframeSrc = base + (pageQS ? (base.includes('?') ? '&' + pageQS.slice(1) : pageQS) : '');
+    const fileLNCEL = document.getElementById('fileLNCEL');
+    const fileIRFIM = document.getElementById('fileIRFIM');
+    const fileLNHOIF = document.getElementById('fileLNHOIF');
+    const fileLNADJGNB = document.getElementById('fileLNADJGNB');
+    const processDefaultBtn = document.getElementById('processDefaultBtn');
+    const processRefarmingBtn = document.getElementById('processRefarmingBtn');
+    const processCoverageBtn = document.getElementById('processCoverageBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const outnameInput = document.getElementById('outname');
+    const logArea = document.getElementById('logArea');
+    const warningsArea = document.getElementById('warningsArea');
 
-      // If you prefer to forward only the "q" parameter, replace the above with:
-      // const params = new URLSearchParams(location.search);
-      // const q = params.get('q');
-      // let iframeSrc = q ? base + '?q=' + encodeURIComponent(q) : base;
+    const pasteBox = document.getElementById('pasteBox');
+    const importPasteBtn = document.getElementById('importPasteBtn');
+    const clearSheetBtn = document.getElementById('clearSheetBtn');
+    const sheetTable = document.getElementById('sheetTable').querySelector('tbody');
+    const thead = document.getElementById('thead');
+    const sheetRowCount = document.getElementById('sheetRowCount');
+    const columns = document.getElementById('columns');
 
-      const frame = document.getElementById('ndbFrame');
-      frame.src = iframeSrc;
+    let csvLNBTS;
+    if (sheetTable) {
+      sheetTable.style.visibility = 'hidden';
+      thead.style.visibility = 'hidden';
+      // sheetTable.style.position = 'absolute';
+    }
 
-      // Keep document title in sync (redundant with <title> but explicit)
-      // document.title = 'ENDC';
-    })();
-  </script>
+    // Enable Process button only when at least one file is selected or sheet has rows.
+    function updateControls() {
+      const filesSelected = fileLNCEL.files.length || fileIRFIM.files.length || fileLNHOIF.files.length || fileLNADJGNB.files.length;
+      const rows = sheetTable.querySelectorAll('tr').length;
+      const isValid = (filesSelected && rows);
+      if(processDefaultBtn) processDefaultBtn.disabled = !isValid;
+      if(processRefarmingBtn) processRefarmingBtn.disabled = !isValid;
+      if(processCoverageBtn) processCoverageBtn.disabled = !isValid;
+      if(downloadBtn) downloadBtn.disabled = true;
+      document.getElementById('status').textContent = filesSelected ? 'Files selected' : 'No files selected';
+    }
 
-  <script>
-    // allow only the trusted iframe origin(s)
-    const TRUSTED_IFRAME_ORIGINS = [
-      'https://script.google.com'
-      // add other origins if you host the iframe elsewhere
+    [fileLNCEL, fileIRFIM, fileLNHOIF, fileLNADJGNB].forEach(el => el.addEventListener('change', updateControls));
+
+    // Simple paste parser: accepts tab-delimited or comma-separated text.
+    function parsePasteToRows(text) {
+      const lines = text.replace(/\r\n/g, '\n').split('\n').map(l => l.trim()).filter(l => l.length);
+      const rows = [];
+      for (const line of lines) {
+        // prefer tab split, fall back to comma
+        let cols = line.split('\t');
+        if (cols.length === 1) cols = line.split(',');
+        rows.push(cols.map(c => c.trim()));
+      }
+      return rows;
+    }
+
+    function importPasteIntoTable() {
+      const text = pasteBox.value.trim();
+      if (!text) {
+        warningsArea.innerHTML = '<div id="warningsBlock" style="color:#7a3b00">Paste area is empty.</div>';
+        return;
+      }
+      const rows = parsePasteToRows(text);
+      // Clear existing rows
+      sheetTable.innerHTML = '';
+      // For each pasted row, insert into 6 columns (missing columns padded)
+      for (const cols of rows) {
+        const tr = document.createElement('tr');
+        for (let i = 0; i < 6; i++) {
+          const td = document.createElement('td');
+          td.contentEditable = "true";
+          td.textContent = cols[i] || '';
+          tr.appendChild(td);
+        }
+        sheetTable.appendChild(tr);
+      }
+      sheetRowCount.textContent = sheetTable.querySelectorAll('tr').length;
+      warningsArea.innerHTML = '';
+      updateControls();
+    }
+
+
+    importPasteBtn.addEventListener('click', () => {
+      importPasteIntoTable(); // keep your original function call
+      // after import, show sheetTable and hide pasteBox
+      if (sheetTable) {
+        thead.style.visibility = 'visible';
+        sheetTable.style.visibility = 'visible';
+        sheetTable.style.position = 'static';
+      }
+      if (pasteBox) {
+        columns.style.visibility = 'hidden';
+        pasteBox.style.visibility = 'hidden';
+        pasteBox.style.position = 'absolute';
+      }
+    });
+
+    clearSheetBtn.addEventListener('click', () => {
+      sheetTable.innerHTML = '';
+      pasteBox.value = '';
+      sheetRowCount.textContent = '0';
+      updateControls();
+
+      // after clear, hide sheetTable and show pasteBox
+      if (sheetTable) {
+        thead.style.visibility = 'hidden';
+        sheetTable.style.visibility = 'hidden';
+        sheetTable.style.position = 'absolute';
+      }
+      if (pasteBox) {
+        columns.style.visibility = 'visible';
+        pasteBox.style.visibility = 'visible';
+        pasteBox.style.position = 'static';
+      }
+    });
+
+    // Simple row count update when table edited (delegation)
+    sheetTable.addEventListener('input', () => {
+      sheetRowCount.textContent = sheetTable.querySelectorAll('tr').length;
+      updateControls();
+    });
+
+    // Placeholder: processBtn should be wired to your ENDC processing routine.
+    // ----------------- START REPLACEMENT: wired ENDC processing -----------------
+    function appendLog(msg) {
+      const ts = (new Date()).toISOString();
+      if (!logArea.style.display) logArea.style.display = 'block';
+      // logArea.textContent += (logArea.textContent ? '\n' : '') + ts + ' ' + msg;
+      logArea.textContent += (logArea.textContent ? '\n' : '') + ' ' + msg;
+      logArea.scrollTop = logArea.scrollHeight;
+    }
+
+    function readSheetRows() {
+      // returns array of row arrays (6 columns per row)
+      const rows = [];
+      const trs = sheetTable.querySelectorAll('tr');
+      trs.forEach(tr => {
+        const cols = Array.from(tr.children).slice(0, 6).map(td => td.textContent.trim());
+        // consider empty first-column rows as skipped
+        if (cols.every(c => c === '')) return;
+        rows.push(cols);
+      });
+      return rows;
+    }
+
+    // Default column names for paste sheet
+    const sheetHeaders = ['LNBTS', 'sid_tgt', 'sid_src', 'NRBTS', 'IP', 'Remarks'];
+
+    // The special outLNBTS columns (names and defaults)
+    const outCols = [
+      '$dn',
+      'actAdvStepwiseScellAdd','actEndcAdjCarrierChk','actEnhFlexCaWithEnDc','actUL256QamForEnDc','actUlTraffDrivUlCa','enableBwCombCheck','enableBwComSetChkEnDc','enableNonCompBcsChkEnDc',
+      'actIdleLBEnDcAware', 'actTransmittedBelowGap', 'actCAggrLteNrDualConnectivity', 'actDynTrigLteNrDualConnectivity',
+      'actEndcSpidFwd', 'actLteNrDualConnectivity', 'endcSchedWeightBoostDl', 'endcSchedWeightBoostUl', 'nrRestrictionOverride',
+      'actEndcAutoX2Setup', 'actUeBasedAnrNr', 'actUeBasedAnrNrHo', 'actEndcHo', 'actHoWoSnChg', 'actSnChangeSnInit',
+      'actLteNrFastNbrRelAdd', 'pdcpProf1001pdcpProfileId', 'pdcpProf1001pi2Target', 'pdcpProf1001snSizeDl', 'pdcpProf1001snSizeUl',
+      'pdcpProf1001statusRepReq', 'pdcpProf1001tDiscard', 'pdcpProf1001pi2TargetDelay', 'pdcpProf1001pi2TargetSize', 'pdcpProf1001pi2Variant',
+      'qciTab5lteNrDualConnectSupport', 'qciTab6lteNrDualConnectSupport', 'qciTab6nrPdcpProfIdx', 'qciTab7lteNrDualConnectSupport', 'qciTab7nrPdcpProfIdx',
+      'qciTab8lteNrDualConnectSupport', 'qciTab8nrPdcpProfIdx', 'qciTab9lteNrDualConnectSupport', 'qciTab9nrPdcpProfIdx', 'tLteNrDualConnectPrep', 'tS1eRABModInd'
     ];
-  
-    window.addEventListener('message', async (ev) => {
-      // validate origin
-      if (!TRUSTED_IFRAME_ORIGINS.some(o => ev.origin.startsWith(o))) return;
-      const msg = ev.data || {};
-      if (msg && msg.type === 'ndb-copy') {
-        try {
-          // do the clipboard write in the top-level context (must be secure context)
-          await navigator.clipboard.writeText(msg.text || '');
-          // reply success
-          ev.source.postMessage({ type: 'ndb-copy-result', ok: true, id: msg.id || null }, ev.origin);
-        } catch (err) {
-          // reply failure
-          ev.source.postMessage({ type: 'ndb-copy-result', ok: false, err: String(err), id: msg.id || null }, ev.origin);
+
+    // Provided default values in order (some positions intentionally blank if input omitted).
+    // If there are fewer values than outCols-1, remaining will be filled with ''.
+
+    const providedDefaults = [
+      '0','1','1','1','0','1','1','1','1', '0', '2', '1', '0', '1', '2', '2', '0', '', '1', '', '1', '3', '1', '1', '1001', '10', '3', '3', '3', '300', '700', '35', '0', '0', '1', '1001', '1', '1001', '1', '1001', '1', '1001', '500', '2000'
+    ];
+
+    // build map from column name -> default value (safer than index shifts)
+    var defaultsMap = {};
+    for (var i = 0; i < outCols.length; i++) {
+      var col = outCols[i];
+      if (col === '$dn') {
+        defaultsMap[col] = undefined; // computed per-row
+      } else {
+        // providedDefaults aligns with outCols starting at index 1
+        defaultsMap[col] = (providedDefaults[i - 1] !== undefined) ? providedDefaults[i - 1] : '';
+      }
+    }
+
+    function buildDefaultRowFor(lnbts) {
+      var row = {};
+      for (var i = 0; i < outCols.length; i++) {
+        var col = outCols[i];
+        if (col === '$dn') {
+          row[col] = 'PLMN-PLMN/MRBTS-' + lnbts + '/LNBTS-' + lnbts;
+        } else {
+          row[col] = defaultsMap[col];
         }
       }
-    }, false);
+      // trace column (kept last in object but CSV order is controlled by headers below)
+      row['src_LNBTS'] = lnbts;
+      return row;
+    }
+
+    function toCSV(rows, headers) {
+      // simple RFC4180-ish CSV builder (commas, quote fields if they contain comma/quote/newline)
+      const esc = v => {
+        if (v === null || v === undefined) return '';
+        const s = String(v);
+        if (s.includes('"') || s.includes(',') || s.includes('\n')) {
+          return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+      };
+      let csv = headers.map(esc).join(',') + '\n';
+      for (const r of rows) {
+        const line = headers.map(h => esc(r[h] === undefined ? '' : r[h])).join(',');
+        csv += line + '\n';
+      }
+      return csv;
+    }
+
+    async function runProcess(profile) {
+      try {
+        // Dynamic active state styling
+        const btnMap = {
+          default: processDefaultBtn,
+          refarming: processRefarmingBtn,
+          coverage: processCoverageBtn
+        };
+
+        Object.keys(btnMap).forEach(key => {
+          const btn = btnMap[key];
+          if (!btn) return;
+          if (key === profile) {
+            btn.classList.remove('ghost');
+            btn.style.backgroundColor = 'var(--accent)';
+            btn.style.color = '#ffffff';
+            btn.style.border = '0';
+          } else {
+            btn.classList.add('ghost');
+            btn.style.backgroundColor = '#eef2ff';
+            btn.style.color = 'var(--accent)';
+            btn.style.border = '1px solid rgba(15, 98, 255, 0.08)';
+          }
+        });
+
+        logArea.style.display = 'block';
+        // reset log for this run (but preserve previous content in case)
+        logArea.textContent = '';
+        appendLog(`INFO: Process started (${profile} profile)`);
+
+        let currentName = outnameInput.value;
+        // Remove previous suffixes if they exist so they don't stack
+        currentName = currentName.replace(/_(default|refarming|coverage)(?=\.csv$|$)/i, '');
+        // Append new suffix
+        const baseExt = currentName.toLowerCase().endsWith('.csv') ? currentName.slice(0, -4) : currentName;
+        outnameInput.value = baseExt + '_' + profile + '.csv';
+
+        // 1) quick checks
+        const filesSelected = fileLNCEL.files.length && fileIRFIM.files.length && fileLNHOIF.files.length && fileLNADJGNB.files.length;
+        const sheetRows = readSheetRows();
+        appendLog(`DEBUG: filesSelected=${!!filesSelected}, sheetRows=${sheetRows.length}`);
+
+        if (!filesSelected) {
+          appendLog('ERROR: Four CSV inputs must be selected (LNCEL, IRFIM, LNHOIF, LNADJGNB). Aborting.');
+          return;
+        }
+        if (!sheetRows.length) {
+          appendLog('ERROR: No rows found on the paste sheet. Aborting.');
+          return;
+        }
+
+        // 2) Build LNBTSmap (all rows) and uLNBTSmap (unique LNBTS values)
+        const LNBTSmap = []; // array of row objects
+        const uLNBTSset = new Set();
+        const uLNBTSarr = []; // preserve order
+
+        for (let i = 0; i < sheetRows.length; i++) {
+          const cols = sheetRows[i];
+          const rowObj = {};
+          for (let j = 0; j < sheetHeaders.length; j++) {
+            rowObj[sheetHeaders[j]] = cols[j] || '';
+          }
+          LNBTSmap.push(rowObj);
+
+          const lnbtsVal = (rowObj['LNBTS'] || '').trim();
+          if (lnbtsVal && !uLNBTSset.has(lnbtsVal)) {
+            uLNBTSset.add(lnbtsVal);
+            uLNBTSarr.push(lnbtsVal);
+          }
+        }
+
+        appendLog(`INFO: Built LNBTSmap with ${LNBTSmap.length} rows.`);
+        appendLog(`INFO: Found ${uLNBTSarr.length} unique LNBTS values.`);
+
+
+        function NOKLTE_LNBTS(uLNBTSarr) {
+          // returns { headers, rows } (does not produce CSV here)
+          const outLNBTS = [];
+          for (const lnbts of uLNBTSarr) {
+            const r = buildDefaultRowFor(lnbts);
+            r['src_LNBTS'] = lnbts;
+            outLNBTS.push(r);
+          }
+          appendLog(`INFO: outLNBTS with ${outLNBTS.length} rows.`);
+
+          // header ordered
+          const headers = outCols.slice(); // outCols must be defined elsewhere as your column order
+          // if you want src_LNBTS included:
+          // headers.push('src_LNBTS');
+
+          return { headers, rows: outLNBTS };
+        }
+
+
+
+        // ---------- CSV parser that supports header on arbitrary row (headerRow is 1-based) ----------
+        const parsedCSVCache = {}; // key by element id + headerRow
+
+        function parseCSVTextToObjects(text, headerRow = 1) {
+          // headerRow: 1-based index of the line that contains headers (default 1)
+          // returns array of objects mapping header -> value
+
+          // normalize to string
+          text = String(text || '');
+
+          // split into lines preserving quoted newline handling
+          const lines = [];
+          let cur = '';
+          let inQuotes = false;
+          for (let i = 0; i < text.length; i++) {
+            const ch = text[i];
+            cur += ch;
+            if (ch === '"') {
+              // handle escaped double quote
+              if (text[i + 1] === '"') {
+                cur += '"';
+                i++;
+                continue;
+              }
+              inQuotes = !inQuotes;
+            }
+            if ((ch === '\n' || ch === '\r') && !inQuotes) {
+              // finalize line (strip trailing newline chars)
+              lines.push(cur.replace(/\r?\n$/, ''));
+              cur = '';
+              if (ch === '\r' && text[i + 1] === '\n') i++; // skip next \n after \r
+            }
+          }
+          if (cur.length) lines.push(cur);
+
+          // helper: parse one CSV line into fields (handles quotes and escaped "")
+          function parseLine(line) {
+            const fields = [];
+            let field = '';
+            let inQ = false;
+            for (let i = 0; i < line.length; i++) {
+              const c = line[i];
+              if (c === '"') {
+                if (inQ && line[i + 1] === '"') { field += '"'; i++; continue; } // escaped quote
+                inQ = !inQ;
+                continue;
+              }
+              if (!inQ && c === ',') {
+                fields.push(field);
+                field = '';
+                continue;
+              }
+              field += c;
+            }
+            fields.push(field);
+            return fields.map(f => f.trim());
+          }
+
+          if (!lines.length) return [];
+
+          // clamp headerRow
+          const hr = Math.max(1, Math.min(headerRow, lines.length)); // 1-based safe
+          const headerLine = lines[hr - 1] || '';
+          const header = parseLine(headerLine);
+
+          // data lines start from headerRow index (1-based), i.e. the line *after* headerRow in most cases,
+          // but if headerRow points to row 1 and you want data from row 2, start at hr
+          const objs = [];
+          for (let i = hr; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            const vals = parseLine(lines[i]);
+            const o = {};
+            for (let j = 0; j < header.length; j++) {
+              const key = header[j];
+              // Prevent horizontal table stitching from overwriting valid data
+              // by only saving the first occurrence of a column name
+              if (key && !(key in o)) {
+                o[key] = vals[j] !== undefined ? vals[j] : '';
+              }
+            }
+            objs.push(o);
+          }
+          return objs;
+        }
+
+        // ---------- read file input and parse with optional headerRow (default 1) ----------
+        function readFileInputToObjects(fileInputEl, headerRow = 1) {
+          // returns Promise<array of objects>
+          return new Promise((resolve, reject) => {
+            if (!fileInputEl || !fileInputEl.files || !fileInputEl.files.length) {
+              resolve([]); // empty if not selected
+              return;
+            }
+            const fname = fileInputEl.id || (fileInputEl.files[0] && fileInputEl.files[0].name) || 'unknown';
+            const cacheKey = `${fname}::hr${headerRow}`;
+            if (parsedCSVCache[cacheKey]) {
+              resolve(parsedCSVCache[cacheKey]);
+              return;
+            }
+            const fr = new FileReader();
+            fr.onerror = () => reject(new Error('Failed reading ' + fname));
+            fr.onload = () => {
+              try {
+                const txt = fr.result;
+                const objs = parseCSVTextToObjects(String(txt || ''), headerRow);
+                parsedCSVCache[cacheKey] = objs;
+                resolve(objs);
+              } catch (e) {
+                reject(e);
+              }
+            };
+            fr.readAsText(fileInputEl.files[0]);
+          });
+        }
+
+
+        // Utility: safe includes (case-insensitive)
+        function ciIncludes(hay, needle) {
+          if (hay === null || hay === undefined) return false;
+          if (needle === null || needle === undefined) return false;
+          return String(hay).toLowerCase().indexOf(String(needle).toLowerCase()) !== -1;
+        }
+
+        // Utility: pull digits part of 'LNCEL-xxx' (fallback to last digits sequence)
+        function extractLNCELNumber(distName) {
+          if (!distName) return '';
+          const m = /LNCEL-?(\d+)/i.exec(distName);
+          if (m && m[1]) return m[1];
+          const mm = distName.match(/(\d{1,4})\b(?!.*\d)/); // last 1-4 digits
+          return mm ? mm[1] : '';
+        }
+
+
+        async function NOKLTE_LNHOIF(uLNBTSarr) {
+          // returns { headers, rows }
+          const headers = ['$dn', 'eutraCarrierInfo', 'thresholdRsrpEndcFilt'];
+          const src = await readFileInputToObjects(fileLNHOIF);
+          const rows = [];
+          if (!src.length) return { headers, rows };
+
+          for (const row of src) {
+            const dn = row['distName'] || '';
+            if (!dn) continue;
+            for (const l of uLNBTSarr) {
+              if (ciIncludes(dn, l)) {
+                rows.push({
+                  $dn: dn,
+                  eutraCarrierInfo: row['eutraCarrierInfo'] !== undefined ? row['eutraCarrierInfo'] : '',
+                  thresholdRsrpEndcFilt: -108
+                });
+                break;
+              }
+            }
+          }
+          appendLog(`DEBUG: NOKLTE_LNHOIF => ${rows.length} rows`);
+          return { headers, rows };
+        }
+
+        async function NOKLTE_IRFIM(uLNBTSarr, profile) {
+          // returns { headers, rows }
+          const headers = ['$dn', 'dlCarFrqEut', 'idleLBEutCelResWeightEnDc', 'idleLBEutCelResPrioEnDc'];
+          const src = await readFileInputToObjects(fileIRFIM);
+          const rows = [];
+          if (!src.length) return { headers, rows };
+
+          const allowed = new Set(['3652', '1625', '1475', '9150']);
+          if (profile === 'coverage') {
+            allowed.add('75');
+            allowed.add('200');
+          }
+          for (const row of src) {
+            const dn = row['distName'] || row['DistName'] || '';
+            const frq = String((row['dlCarFrqEut'] !== undefined) ? row['dlCarFrqEut'] : '').trim();
+            if (!dn || !allowed.has(frq)) continue;
+
+            let w = row['idleLBEutCelResWeightEnDc'];
+            let p = row['idleLBEutCelResPrioEnDc'];
+
+            if (w === undefined || w === null || String(w).trim() === '') {
+              if (frq === '3652') w = '1';
+              else if (frq === '1625') w = '100';
+              else if (frq === '1475') w = '50';
+              else if (frq === '75') w = '100';
+              else if (frq === '200') w = '50';
+              else if (frq === '9150') w = '100';
+              else w = '';
+            }
+            if (p === undefined || p === null || String(p).trim() === '') {
+              if (frq === '3652') p = '5';
+              else if (frq === '1625') p = '30';
+              else if (frq === '1475') p = '25';
+              else if (frq === '75') p = '30';
+              else if (frq === '200') p = '25';
+              else if (frq === '9150') p = '30';
+              else p = '';
+            }
+
+            for (const l of uLNBTSarr) {
+              if (ciIncludes(dn, l)) {
+                rows.push({
+                  $dn: dn,
+                  dlCarFrqEut: frq,
+                  idleLBEutCelResWeightEnDc: String(w),
+                  idleLBEutCelResPrioEnDc: String(p)
+                });
+                break;
+              }
+            }
+          }
+          appendLog(`DEBUG: NOKLTE_IRFIM => ${rows.length} rows`);
+          return { headers, rows };
+        }
+
+
+        async function NOKLTE_LNCEL(uLNBTSarr, profile) {
+          // returns { headers, rows, LNCELmap, LNCELmap2, siteEarfcnMap }
+          const headers = ['$dn', 'enableDefaultBcsChkEnDc','idleLBCelResWeightEnDc', 'idleLBCellReSelPrioEnDc'];
+          const src = await readFileInputToObjects(fileLNCEL);
+          const rows = [];
+          const LNCELmap = {};
+          const LNCELmap2 = {};
+          const siteEarfcnMap = {};
+          if (!src.length) return { headers, rows, LNCELmap, LNCELmap2, siteEarfcnMap };
+
+          // normalize uLNBTSarr to strings + set for quick lookup
+          const allowedMRs = new Set((uLNBTSarr || []).map(x => String(x).trim()));
+
+          const allowedEar = new Set(['3652', '1625', '1475', '75', '200', '9150']);
+          const allowedEar2 = new Set(['3652', '1625', '1475', '9150']);
+          if (profile === 'coverage') {
+            allowedEar2.add('75');
+            allowedEar2.add('200');
+          }
+          for (const row of src) {
+            const mr = (row['MRBTS'] !== undefined ? String(row['MRBTS']).trim() : '');
+            const dn = (row['distName'] !== undefined ? row['distName'] : '');
+            const ear = String(row['earfcnDL'] !== undefined ? row['earfcnDL'] : '').trim();
+            if (!mr || !dn) continue;
+
+            // REQUIREMENT: only process when mr exist in uLNBTSarr
+            if (!allowedMRs.has(mr)) continue;
+
+            if (!allowedEar.has(ear)) continue;            
+
+            // Track existing EARFCNs for this specific site
+            if (!siteEarfcnMap[mr]) siteEarfcnMap[mr] = new Set();
+            siteEarfcnMap[mr].add(ear);
+
+            let w = row['idleLBCelResWeightEnDc'];
+            let p = row['idleLBCellReSelPrioEnDc'];
+            if (w === undefined || w === null || String(w).trim() === '' || String(w).trim() === '\\N' || String(w).trim() === '\N') {
+              if (ear === '3652') w = '1';
+              else if (ear === '1625') w = '100';
+              else if (ear === '1475') w = '50';
+              else if (ear === '75') w = '100';
+              else if (ear === '200') w = '50';
+              else if (ear === '9150') w = '100';
+              else w = '';
+            }
+            if (p === undefined || p === null || String(p).trim() === '' || String(p).trim() === '\\N'  || String(p).trim() === '\N') {
+              if (ear === '3652') p = '5';
+              else if (ear === '1625') p = '30';
+              else if (ear === '1475') p = '25';
+              else if (ear === '75') p = '30';
+              else if (ear === '200') p = '25';
+              else if (ear === '9150') p = '30';
+              else p = '';
+            }
+
+            rows.push({
+              $dn: dn,
+              enableDefaultBcsChkEnDc: 1,
+              idleLBCelResWeightEnDc: String(w),
+              idleLBCellReSelPrioEnDc: String(p)
+            });
+
+            // build LNCELmap only for MR present in uLNBTSarr
+            const lncelNum = extractLNCELNumber(dn);
+            if (!LNCELmap[mr]) LNCELmap[mr] = [];
+            if (lncelNum && !LNCELmap[mr].includes(lncelNum)) {
+              LNCELmap[mr].push(lncelNum);
+            }
+            
+            //will be return for input NRDCDPR
+            if (!allowedEar2.has(ear)) continue;
+
+            if (!LNCELmap2[mr]) LNCELmap2[mr] = [];
+            if (lncelNum && !LNCELmap2[mr].includes(lncelNum)) {
+              LNCELmap2[mr].push(lncelNum);
+            }
+
+          }
+
+          appendLog(`DEBUG: NOKLTE_LNCEL => ${rows.length} rows, LNCELmap keys=${Object.keys(LNCELmap).length}`);
+          return { headers, rows, LNCELmap, LNCELmap2, siteEarfcnMap };
+        }
+
+
+        function NOKLTE_ENDCDMEASCONF(uLNBTSarr, profile) {
+          // generate rows (array of objects) with 22 columns per your spec
+          const headers = [
+            '$dn', 'b1NrMeasPurpose', 'b1NrReportAmount', 'b1NrReportInterval', 'b1ThresholdNrRsrp', 'b1TimeToTriggerRsrp',
+            'b1TriggerQuantity', 'carrierFreqNrCell', 'endcNrDropThresh', 'hysB1ThresholdRsrp', 'hysB1ThresholdRsrq', 'nrCarPrio',
+            'nrPciNbrRelAddHyst', 'nrPciNbrRelAddThresh', 'nrPciNbrRelRemThresh', 'quantityConfigId', 'ssbDuration', 'ssbOffset',
+            'ssbPeriodicity', 'ssbSubcarrierSpacing', 'freqBandIndicatorNr', 'priority'
+          ];
+          const values = [
+        /*$dn handled separately*/ '0', '0', '3600000', '66', '256', '0', '423410', '0', '2', '2', '6', '980', '10', '10000', '0', '3', '0', '2', '15', '1', '0'
+          ];
+          
+          if (profile === 'refarming' || profile === 'coverage') {
+            values[6] = '157690'; // carrierFreqNrCell
+			values[18] = '15';    // ssbSubcarrierSpacing
+            values[19] = '28';    // freqBandIndicatorNr
+          }
+          const rows = [];
+          for (const l of uLNBTSarr) {
+            const r = {};
+            r['$dn'] = `PLMN-PLMN/MRBTS-${l}/LNBTS-${l}/NRDCDPR-0/ENDCDMEASCONF-3`;
+            for (let i = 1; i < headers.length; i++) {
+              r[headers[i]] = values[i - 1] !== undefined ? values[i - 1] : '';
+            }
+            rows.push(r);
+          }
+          appendLog(`DEBUG: NOKLTE_ENDCDMEASCONF => ${rows.length} rows`);
+          return { headers, rows }; // return both headers and rows
+        }
+
+        function NOKLTE_NRMEASDPR(uLNBTSarr) {
+          // 9 columns as requested
+          const headers = [
+            '$dn', 'measGapEnabledNRMeas', 'retryTimerB1NR', 'supervisionTimerB1NR',
+            'filterCoeffRsrpRSIndex', 'filterCoeffRsrqRSIndex', 'filterCoefficientRsrp', 'filterCoefficientRsrq', 'quantityConfigId'
+          ];
+          const values = ['3', '30', '3', '4', '4', '4', '4', '0']; // corresponds to col2..col9
+          const rows = [];
+          for (const l of uLNBTSarr) {
+            const r = {};
+            r['$dn'] = `PLMN-PLMN/MRBTS-${l}/LNBTS-${l}/NRMEASDPR-0`;
+            for (let i = 1; i < headers.length; i++) {
+              r[headers[i]] = values[i - 1] !== undefined ? values[i - 1] : '';
+            }
+            rows.push(r);
+          }
+          appendLog(`DEBUG: NOKLTE_NRMEASDPR => ${rows.length} rows`);
+          return { headers, rows };
+        }
+
+
+
+        function NOKLTE_NRDCDPR(uLNBTSarr, LNCELmap, profile) {
+          let baseFixedHeaders;
+          let baseValues;
+          let nrLabels = {};
+          
+          if (profile === 'refarming' || profile === 'coverage') {
+            baseFixedHeaders = [
+              '$dn',
+              'carrierCenterFreqNr_NR26','chBwDlNrCell_NR26','ssbFreqNrCell_NR26',
+              'carrierCenterFreqNr_NR700','chBwDlNrCell_NR700','ssbFreqNrCell_NR700',
+              'carrierCenterFreqNr_NR21','chBwDlNrCell_NR21','ssbFreqNrCell_NR21',
+              'actSortBcListEnDc', 'allowedBcSelectMethod', 'bufTrigForB1Nr', 'dlPathlossChg', 'enDCpMaxEUTRApowerOffset',
+              'enDCpMaxNRpowerOffset', 'tPeriodicPhr', 'tProhibitPhr', 'cAggrLteNrDcCellList'
+            ];
+            baseValues = [
+              '532002', '60', '531870',
+              '157600', '10', '157690',
+              '', '', '',
+              '1', '2', '0', '1', '0', '0', '20', '0', '-1'
+            ];
+            nrLabels = { 1: 'NR26', 2: 'NR26', 3: 'NR26', 4: 'NR700', 5: 'NR700', 6: 'NR700', 7: 'NR21', 8: 'NR21', 9: 'NR21' };
+          } else {
+            baseFixedHeaders = [
+              '$dn','carrierCenterFreqNr','chBwDlNrCell','ssbFreqNrCell', 'actSortBcListEnDc', 'allowedBcSelectMethod', 'bufTrigForB1Nr', 'dlPathlossChg', 'enDCpMaxEUTRApowerOffset',
+              'enDCpMaxNRpowerOffset', 'tPeriodicPhr', 'tProhibitPhr', 'cAggrLteNrDcCellList'
+            ];
+            baseValues = ['423500','15','423410','1', '2', '0', '1', '0', '0', '20', '0', '-1'];
+          }
+
+          let maxTriplets = 0;
+          for (const mr of (uLNBTSarr || [])) {
+            const key = String(mr);
+            const list = (LNCELmap && LNCELmap[key]) ? LNCELmap[key] : [];
+            if (Array.isArray(list) && list.length > maxTriplets) maxTriplets = list.length;
+          }
+
+          const baseHeaders = baseFixedHeaders.slice();
+          for (let n = 1; n <= maxTriplets; n++) {
+            baseHeaders.push('actB1NrBeamMeas');
+            baseHeaders.push('lcrId');
+            baseHeaders.push('method');
+          }
+
+          const rows = [];
+          for (const l of (uLNBTSarr || [])) {
+            const r = {};
+            r['$dn'] = `PLMN-PLMN/MRBTS-${l}/LNBTS-${l}/NRDCDPR-0`;
+            for (let i = 1; i < baseFixedHeaders.length; i++) {
+              r[baseFixedHeaders[i]] = baseValues[i - 1] !== undefined ? baseValues[i - 1] : '';
+            }
+
+            const lnList = (LNCELmap && LNCELmap[String(l)]) ? LNCELmap[String(l)] : [];
+            for (let n = 1; n <= maxTriplets; n++) {
+              const idx = n - 1;
+              const cellVal = lnList[idx];
+
+              if (cellVal === undefined || cellVal === null || String(cellVal).trim() === '') {
+                r[`actB1NrBeamMeas#${n}`] = null;
+                r[`lcrId#${n}`] = null;
+                r[`method#${n}`] = null;
+              } else {
+                r[`actB1NrBeamMeas#${n}`] = '0';
+                r[`lcrId#${n}`] = String(cellVal);
+                r[`method#${n}`] = '10';
+              }
+            }
+            rows.push(r);
+          }
+
+          appendLog(`DEBUG: NOKLTE_NRDCDPR => ${rows.length} rows (maxTriplets=${maxTriplets})`);
+          return { baseHeaders, rows, maxTriplets, baseFixedCount: baseFixedHeaders.length, nrLabels };
+        }
+
+
+
+
+        async function NOKLTE_LNADJGNB(LNBTSmap) {
+          // returns { headers, rows, uLNADJGNB, LNADJGNBmap }
+          // header col#1: $dn
+          const headers = [
+            '$dn', 'adjGnbId', 'adjGnbIdLength', 'administrativeState', 'cPlaneIpAddr', 'cPlaneIpAddrCtrl',
+            'lbpsblockedNrAct', 'mcc', 'mnc', 'mncLength', 'x2ToGnbLinkStatus'
+          ];
+
+          // Read headers from row 2
+          const src = await readFileInputToObjects(fileLNADJGNB, 2);
+          const rows = [];
+          const uLNADJGNB = {};   // map LNBTS -> Set(indices) plus lookup LNBTS:index -> adjGnbId
+          const LNADJGNBmap = {}; // map LNBTS -> array of existing { index, adjGnbId, row }
+
+          if (!src.length) {
+            appendLog('WARN: LNADJGNB file empty or not provided.');
+            return { headers, rows, uLNADJGNB, LNADJGNBmap };
+          }
+
+          // helper: case-insensitive field lookup
+          function getField(obj, key) {
+            if (!obj) return undefined;
+            if (key in obj) return obj[key];
+            const lk = key.toLowerCase();
+            for (const k of Object.keys(obj)) {
+              if (k && k.toLowerCase() === lk) return obj[k];
+            }
+            return undefined;
+          }
+
+          // 1) Build set of LNBTS values from provided LNBTSmap for matching
+          const LNBTSset = new Set();
+          for (const r of (LNBTSmap || [])) {
+            const v = (r && (r.LNBTS || r.Lnbts || r.lnbts)) ? String(r.LNBTS || r.Lnbts || r.lnbts).trim() : '';
+            if (v) LNBTSset.add(v);
+          }
+
+          // 2) Scan dump rows and populate LNADJGNBmap & uLNADJGNB for existing entries
+          for (const r of src) {
+            // find dn column
+            const dnVal = getField(r, 'distName') || getField(r, '$dn') || getField(r, 'DistName') || getField(r, 'DN') || '';
+            if (!dnVal) continue;
+
+            // try to find which LNBTS this dump row belongs to (match any LNBTS in our set)
+            let matchedLnbts = null;
+            for (const candidate of LNBTSset) {
+              if (ciIncludes(dnVal, candidate)) { matchedLnbts = candidate; break; }
+            }
+            if (!matchedLnbts) continue;
+
+            // extract LNADJGNB index: last numeric after LNADJGNB-
+            let idx = null;
+            const m = /LNADJGNB-?(\d+)/i.exec(dnVal);
+            if (m && m[1]) idx = parseInt(m[1], 10);
+            else {
+              // fallback: last numeric sequence
+              const mm = dnVal.match(/(\d{1,4})\b(?!.*\d)/);
+              idx = mm ? parseInt(mm[1], 10) : null;
+            }
+
+            // accept 0 as valid; only skip when idx is null/NaN
+            if (idx === null || Number.isNaN(idx)) continue;
+
+
+            let adjGnbId = getField(r, 'adjGnbId') || getField(r, 'adjGnbID') || getField(r, 'adjGnb') || '';
+            adjGnbId = String(adjGnbId).trim(); // Ensure robust matching by trimming spaces
+
+            // populate LNADJGNBmap
+            if (!LNADJGNBmap[matchedLnbts]) LNADJGNBmap[matchedLnbts] = [];
+            LNADJGNBmap[matchedLnbts].push({ index: idx, adjGnbId: adjGnbId, row: r });
+
+            // populate uLNADJGNB structures
+            if (!uLNADJGNB[matchedLnbts]) {
+              uLNADJGNB[matchedLnbts] = { indices: new Set(), byIndex: {}, values: new Set() };
+            }
+            uLNADJGNB[matchedLnbts].indices.add(idx);
+            uLNADJGNB[matchedLnbts].byIndex[idx] = adjGnbId;
+            if (adjGnbId !== '') {
+              uLNADJGNB[matchedLnbts].values.add(adjGnbId);
+            }
+            //appendLog(`DEBUG: Dump scan found MRBTS=${matchedLnbts}, LNADJGNB-${idx}, adjGnbId=${adjGnbId}`);
+          }
+
+        // start index from 1 instead of 0
+        function generateUnusedIndex(lnbts) {
+            const START = 1; // <-- start free indices from 1 now
+            if (!uLNADJGNB[lnbts]) return START;
+            const arr = Array.from(uLNADJGNB[lnbts].indices)
+                .map(n => parseInt(n, 10))
+                .filter(n => !isNaN(n))
+                .sort((a, b) => a - b);
+
+            if (!arr.length) return START;
+
+            if (arr[0] > START) return START;
+
+            for (let i = 0; i < arr.length - 1; i++) {
+                const current = arr[i];
+                const next = arr[i + 1];
+                if (next - current > 1) {
+                const candidate = current + 1;
+                if (candidate >= START) return candidate;
+                }
+            }
+
+            const last = arr[arr.length - 1];
+            return Math.max(last + 1, START);
+        }
+
+
+          // 3) Generate rows from LNBTSmap (in original order)
+          for (const item of (LNBTSmap || [])) {
+            const lnbts = (item && item.LNBTS) ? String(item.LNBTS).trim() : (item && (item.Lnbts || item.lnbts) ? String(item.Lnbts || item.lnbts).trim() : '');
+            if (!lnbts) continue;
+
+            // candidate adjGnbId from paste sheet: sid_tgt, NRBTS, IP (in that order)
+            const candidateAdj = (item.NRBTS && String(item.NRBTS).trim()) ||
+              '';
+
+            // ensure uLNADJGNB bucket exists
+            if (!uLNADJGNB[lnbts]) uLNADJGNB[lnbts] = { indices: new Set(), byIndex: {}, values: new Set() };
+
+            // determine non-duplicate index
+            const newIndex = generateUnusedIndex(lnbts);
+
+            // uniqueness check: if this adj exists already for this LNBTS, skip (non-unique)
+            const candidateStr = String(candidateAdj || '').trim();
+            appendLog(`DEBUG: Checking paste candidate MRBTS=${lnbts} with adjGnbId=${candidateStr}`);
+            if (candidateStr !== '' && uLNADJGNB[lnbts].values.has(candidateStr)) {
+              appendLog(`DEBUG: Skipping LNADJGNB creation for LNBTS ${lnbts} because adjGnbId "${candidateStr}" already exists.`);
+              continue;
+            }
+            // if candidate is empty but an empty-string entry already exists, treat as non-unique and skip
+            if (candidateStr === '' && uLNADJGNB[lnbts].values.has('')) {
+              appendLog(`DEBUG: Skipping LNADJGNB creation for LNBTS ${lnbts} because empty adjGnbId already exists.`);
+              continue;
+            }
+
+            // build row values:
+            // if there is an existing LNADJGNB dump row with the chosen index, prefer its column values
+            let existingRowForIndex = (LNADJGNBmap[lnbts] || []).find(e => parseInt(e.index, 10) === parseInt(newIndex, 10));
+            const rowObj = {};
+
+            // $dn
+            rowObj['$dn'] = `PLMN-PLMN/MRBTS-${lnbts}/LNBTS-${lnbts}/LNADJGNB-${newIndex}`;
+
+            // adjGnbId
+            rowObj['adjGnbId'] = existingRowForIndex ? (getField(existingRowForIndex.row, 'adjGnbId') || '') : candidateStr || '';
+
+            // adjGnbIdLength
+            rowObj['adjGnbIdLength'] = 23; //rowObj['adjGnbId'] ? String(String(rowObj['adjGnbId']).length) : '';
+
+            // administrativeState
+            rowObj['administrativeState'] = 1; //existingRowForIndex ? (getField(existingRowForIndex.row, 'administrativeState') || '') : '';
+
+            // cPlaneIpAddr (try paste sheet IP then dump)
+            rowObj['cPlaneIpAddr'] = item.IP || item['cPlaneIpAddr'] || (existingRowForIndex ? (getField(existingRowForIndex.row, 'cPlaneIpAddr') || '') : '');
+
+            // cPlaneIpAddrCtrl
+            rowObj['cPlaneIpAddrCtrl'] = 0; //existingRowForIndex ? (getField(existingRowForIndex.row, 'cPlaneIpAddrCtrl') || '') : '';
+
+            // lbpsblockedNrAct
+            rowObj['lbpsblockedNrAct'] = ''; //existingRowForIndex ? (getField(existingRowForIndex.row, 'lbpsblockedNrAct') || '') : '';
+
+            // mcc, mnc, mncLength
+            rowObj['mcc'] = 510; //existingRowForIndex ? (getField(existingRowForIndex.row, 'mcc') || '') : '';
+            rowObj['mnc'] = 1; //existingRowForIndex ? (getField(existingRowForIndex.row, 'mnc') || '') : '';
+            rowObj['mncLength'] = 2; //existingRowForIndex ? (getField(existingRowForIndex.row, 'mncLength') || '') : '';
+
+            // x2ToGnbLinkStatus
+            rowObj['x2ToGnbLinkStatus'] = '' //existingRowForIndex ? (getField(existingRowForIndex.row, 'x2ToGnbLinkStatus') || '') : '';
+
+            // final uniqueness check w.r.t uLNADJGNB: if combination LNBTS + adjGnbId already exists skip
+            const finalAdj = rowObj['adjGnbId'] ? String(rowObj['adjGnbId']) : '';
+            if (uLNADJGNB[lnbts].values.has(finalAdj)) {
+              appendLog(`DEBUG: After preparing values, adjGnbId "${finalAdj}" for LNBTS ${lnbts} found non-unique. Skipping push.`);
+              continue;
+            }
+
+            // push to rows and update uLNADJGNB
+            rows.push(rowObj);
+            uLNADJGNB[lnbts].indices.add(newIndex);
+            uLNADJGNB[lnbts].byIndex[newIndex] = finalAdj;
+            uLNADJGNB[lnbts].values.add(finalAdj);
+
+            // also update LNADJGNBmap for completeness
+            if (!LNADJGNBmap[lnbts]) LNADJGNBmap[lnbts] = [];
+            LNADJGNBmap[lnbts].push({ index: newIndex, adjGnbId: finalAdj, row: rowObj });
+            // appendLog(`DEBUG: Created LNADJGNB for LNBTS=${lnbts} index=${newIndex} adjGnbId="${finalAdj}"`);
+          }
+
+          appendLog(`INFO: NOKLTE_LNADJGNB => ${rows.length} new rows (existing LNBTS keys=${Object.keys(LNADJGNBmap).length})`);
+          return { headers, rows };
+        }
+
+
+        function NOKLTE_LNRELGNBCELL(uLNBTSarr) {
+          // returns { headers, rows }
+          // total columns required = 11 (col#1 .. col#11)
+          // header col#1: $dn (value will be empty)
+          // provided header names (col2..): gnbIdLength lteNrDualConnectAllowed nrCellId removeAllowed mcc mnc mncLength nrStatus pwSavingDeactInd sourceOfData
+          // remaining headers padded as placeholders to reach 17 columns.
+          const baseHeaders = [
+            '$dn',
+            'gnbIdLength', 'lteNrDualConnectAllowed', 'nrCellId', 'removeAllowed',
+            'mcc', 'mnc', 'mncLength', 'nrStatus', 'pwSavingDeactInd', 'sourceOfData'
+          ];
+
+          // pad to total 17 columns
+          const totalCols = 11;
+          const headers = baseHeaders.slice();
+          let padIndex = 12; // next column number (col12..col17)
+          while (headers.length < totalCols) {
+            headers.push(`col${padIndex}`);
+            padIndex++;
+          }
+
+          const rows = [];
+          for (const l of (uLNBTSarr || [])) {
+            const r = {};
+            // per spec: $dn value is empty
+            r['$dn'] = '';
+
+            // all other columns empty as requested
+            for (let i = 1; i < headers.length; i++) {
+              r[headers[i]] = '';
+            }
+
+            rows.push(r);
+          }
+
+          appendLog(`DEBUG: NOKLTE_LNRELGNBCELL => ${rows.length} rows with ${headers.length} columns`);
+          return { headers, rows };
+        }
+
+        // ------------------ NOKLTE_CAIMLBP ------------------
+        function NOKLTE_CAIMLBP(uLNBTSarr, profile, siteEarfcnMap = {}) {
+          // returns { headers, rows }
+          const headers = ['$dn', 'earfcnDL'];
+          const rows = [];
+
+          for (const l of (uLNBTSarr || [])) {
+            const earMap = [1625, 1475, 3652, 9150]; // base mapping
+            if (profile === 'coverage') {
+              const siteEars = siteEarfcnMap[l] || new Set();
+              if (siteEars.has('200')) earMap.push(200); // index 3 if exists
+              if (siteEars.has('75')) earMap.push(75);   // index 4 if exists
+            }
+            
+            for (let idx = 0; idx < earMap.length; idx++) {
+              const r = {};
+              r['$dn'] = `PLMN-PLMN/MRBTS-${l}/LNBTS-${l}/CAGENB-0/CAIMLBP-${idx}`;
+              r['earfcnDL'] = String(earMap[idx]);
+              rows.push(r);
+            }
+          }
+
+          appendLog(`DEBUG: NOKLTE_CAIMLBP => ${rows.length} rows`);
+          return { headers, rows };
+        }
+
+        // ------------------ NOKLTE_IMLBNR ------------------
+        function NOKLTE_IMLBNR(uLNBTSarr, profile, siteEarfcnMap = {}) {
+          // returns { headers, rows }
+          const headers = ['$dn', 'b1NrRequired', 'band'];
+          const rows = [];
+
+          for (const l of (uLNBTSarr || [])) {
+            let maxIdx = 3;
+            if (profile === 'coverage') {
+              const siteEars = siteEarfcnMap[l] || new Set();
+              if (siteEars.has('200')) maxIdx++;
+              if (siteEars.has('75')) maxIdx++;
+            }
+            
+            for (let idx = 0; idx < maxIdx; idx++) {
+              const r = {};
+              r['$dn'] = `PLMN-PLMN/MRBTS-${l}/LNBTS-${l}/CAGENB-0/CAIMLBP-${idx}/IMLBNR-2`;
+              r['b1NrRequired'] = '0';
+              r['band'] = '28';
+              rows.push(r);
+            }
+          }
+
+          appendLog(`DEBUG: NOKLTE_IMLBNR => ${rows.length} rows`);
+          return { headers, rows };
+        }
+		
+        // ------------------ NOKLTE_MODPR ------------------
+        function NOKLTE_MODPR(uLNBTSarr, profile) {
+          // returns { headers, rows }
+          // Headers/values follow the exact sequence you provided (cols 2..16)
+          const headers = [
+            '$dn',
+            'autoAdapt', 'autoAdaptIMLB', 'caBlockingAllowed', 'configUeCapEndcHoRetry',
+            'enDcBlockingAllowed', 'idleLBPercCaUe', 'idleLBPercentageOfUes', 'idleLBPercUeTM9',
+            'targetSelMethod',
+            'freqLayer', 'preference', 'freqLayer2', 'preference2', 'freqLayer3', 'preference3', 'freqLayer4', 'preference4', 'freqLayer5', 'preference5'
+          ];
+          // According to your comment values for cols 2..16:
+          const values = ['0', '0', '0', '0', '0', '0', '100', '0', '0', '1625', '1', '1475', '1', '3652', '1', '', '', '', ''];
+          
+          if (profile === 'coverage') {
+            values[15] = '200'; // freqLayer4
+            values[16] = '1';   // preference4
+            values[17] = '75';  // freqLayer5
+            values[18] = '1';   // preference5
+          }
+          // Note: I named the repeated freqLayer/preference pairs freqLayer/freqLayer2/freqLayer3 and preference/preference2/preference3
+
+          const rows = [];
+          for (const l of (uLNBTSarr || [])) {
+            const r = {};
+            r['$dn'] = `PLMN-PLMN/MRBTS-${l}/LNBTS-${l}/MODPR-0`;
+            // apply values to headers 1.. (headers[1]..headers[16])
+            for (let i = 1; i < headers.length; i++) {
+              r[headers[i]] = (values[i - 1] !== undefined) ? String(values[i - 1]) : '';
+            }
+            rows.push(r);
+          }
+
+          appendLog(`DEBUG: NOKLTE_MODPR => ${rows.length} rows`);
+          return { headers, rows };
+        }
+
+        // ------------------ NOKLTE_ANR ------------------
+        function NOKLTE_ANR(uLNBTSarr) {
+          // returns { headers, rows }
+          // NOTE: ANR mapping in your comment had blanks and a tail sequence of 13 numbers.
+          // I implement a best-effort mapping: keep most fields blank except set reasonable defaults
+          // and place your numeric tail sequence into the last 13 headers (documented below).
+          //
+          // If you want these numbers mapped differently, tell me the exact header->value mapping.
+          const headers = [
+            '$dn',
+            'actLnadjnGnbPlmnId', 'anrDefRelPsHoAllowed', 'carrierFreqNrCell', 'frqNrCarSelect', 'gNBIdLength',
+            'paramMeasConfId', 'paramPlmnId', 'paramMeasConfId_2', 'thresholdNrRsrp', 'thresholdNrRsrq',
+            'anrDefRelDcAllowed', 'carrierFreqNrCell_2', 'frqNrCarSelect_2', 'gNBIdLength_2', 'paramMeasConfId_3',
+            'paramPlmnId_2', 'mcc', 'mnc', 'mncLength', 'paramPlmnId_3', 'anrNrInactivityTimer', 'actAutoNrNeighRemoval'
+          ];
+
+          // The numeric sequence you provided in the comment (13 numbers) will be placed into the last 13 entries
+          // of the header list (positions headers.length - 13 .. headers.length - 1).
+          // Provided sequence (as in your comment): [1,46,1,1,23,1,1,510,1,2,1,3,0]
+          const tailValues = ['1', '46', '', '1', '', '1', '23', '1', '1', '510', '1', '2', '1', '3', '0'];
+
+          const rows = [];
+          for (const l of (uLNBTSarr || [])) {
+            const r = {};
+            r['$dn'] = `PLMN-PLMN/MRBTS-${l}/LNBTS-${l}/ANR-0`;
+
+            // default: leave early fields blank (you can change these defaults if needed)
+            for (let i = 1; i < headers.length - tailValues.length; i++) {
+              r[headers[i]] = '';
+            }
+            // place tailValues into the last headers
+            const startIndex = headers.length - tailValues.length;
+            for (let j = 0; j < tailValues.length; j++) {
+              r[headers[startIndex + j]] = String(tailValues[j]);
+            }
+
+            rows.push(r);
+          }
+
+          //appendLog(`DEBUG: NOKLTE_ANR => ${rows.length} rows (tail values placed to last ${tailValues.length} headers)`);
+          appendLog(`DEBUG: NOKLTE_ANR => ${rows.length} rows`);
+          return { headers, rows };
+        }
+
+
+
+        const { headers: lnbtsHeaders, rows: lnbtsRows } = NOKLTE_LNBTS(uLNBTSarr);
+        const { headers: lnhoifHeaders, rows: lnhoifRows } = await NOKLTE_LNHOIF(uLNBTSarr);
+        const { headers: irfimHeaders, rows: irfimRows } = await NOKLTE_IRFIM(uLNBTSarr, profile);
+        const { headers: lncelHeaders, rows: lncelRows, LNCELmap, LNCELmap2, siteEarfcnMap } = await NOKLTE_LNCEL(uLNBTSarr, profile);
+        const { headers: endcHeaders, rows: endcRows } = NOKLTE_ENDCDMEASCONF(uLNBTSarr, profile);
+        const { headers: nrmeasHeaders, rows: nrmeasRows } = NOKLTE_NRMEASDPR(uLNBTSarr);
+        const { baseHeaders, rows: nrdcdprRows, maxTriplets: nrdcdprMaxTriplets, baseFixedCount: nrdcdprBaseFixedCount, nrLabels: nrdcdprNrLabels } = NOKLTE_NRDCDPR(uLNBTSarr, LNCELmap2, profile);
+        appendLog(`INFO: Built LNBTSmap with ${LNBTSmap.length} rows.`);
+        const { headers: lnadjgnbHeaders, rows: lnadjgnbRows } = await NOKLTE_LNADJGNB(LNBTSmap);
+        const { headers: lnrelgnbHeaders, rows: lnrelgnbRows } = NOKLTE_LNRELGNBCELL(uLNBTSarr);
+        const { headers: caimHeaders, rows: caimRows } = NOKLTE_CAIMLBP(uLNBTSarr, profile, siteEarfcnMap);
+        const { headers: imlHeaders, rows: imlRows } = NOKLTE_IMLBNR(uLNBTSarr, profile, siteEarfcnMap);
+        const { headers: modprHeaders, rows: modprRows } = NOKLTE_MODPR(uLNBTSarr, profile);
+        const { headers: anrHeaders, rows: anrRows } = NOKLTE_ANR(uLNBTSarr);
+
+
+        // --- build combined CSV (insert this block right after these calls) ---
+        (function buildAndWireCombinedCSV() {
+          const sections = [
+            { title: 'NOKLTE:LNBTS', headers: lnbtsHeaders, rows: lnbtsRows },
+            { title: 'NOKLTE:LNHOIF', headers: lnhoifHeaders, rows: lnhoifRows },
+            { title: 'NOKLTE:IRFIM', headers: irfimHeaders, rows: irfimRows },
+            { title: 'NOKLTE:LNCEL', headers: lncelHeaders, rows: lncelRows },
+            { title: 'NOKLTE:ENDCDMEASCONF', headers: endcHeaders, rows: endcRows },
+            { title: 'NOKLTE:NRMEASDPR', headers: nrmeasHeaders, rows: nrmeasRows },
+            // For NRDCDPR include dynamic meta
+            { title: 'NOKLTE:NRDCDPR', headers: baseHeaders, rows: nrdcdprRows, maxTriplets: (typeof nrdcdprMaxTriplets !== 'undefined' ? nrdcdprMaxTriplets : 0), baseFixedCount: nrdcdprBaseFixedCount, nrLabels: nrdcdprNrLabels },
+            { title: 'NOKLTE:LNADJGNB', headers: lnadjgnbHeaders, rows: lnadjgnbRows },
+            { title: 'NOKLTE:LNRELGNBCELL', headers: lnrelgnbHeaders, rows: lnrelgnbRows },
+            { title: 'NOKLTE:CAIMLBP', headers: caimHeaders, rows: caimRows },
+            { title: 'NOKLTE:IMLBNR', headers: imlHeaders, rows: imlRows },
+            { title: 'NOKLTE:MODPR', headers: modprHeaders, rows: modprRows },
+            { title: 'NOKLTE:ANR', headers: anrHeaders, rows: anrRows }
+          ];
+
+          // compute how many data rows we need (rows start at CSV row 3)
+          const maxDataRows = Math.max(...sections.map(s => (s.rows || []).length));
+
+          // number of output rows = 1 (title row) + 1 (header row) + maxDataRows
+          const totalRows = 2 + maxDataRows;
+
+          // compute total columns
+          const totalCols = sections.reduce((acc, s) => acc + (Array.isArray(s.headers) ? s.headers.length : 0), 0);
+
+          // init matrix with empty strings
+          const mat = Array.from({ length: totalRows }, () => Array(totalCols).fill(''));
+
+          // fill matrix, section by section
+          let colStart = 0;
+          sections.forEach(section => {
+            const hdrs = Array.isArray(section.headers) ? section.headers : [];
+            const hlen = hdrs.length;
+            if (hlen === 0) {
+              colStart += 0;
+              return;
+            }
+
+            // row 1 (index 0): place section title in the first column of the section
+            mat[0][colStart] = section.title || '';
+
+            // row 2 (index 1): put headers (use as-is)
+            for (let j = 0; j < hlen; j++) {
+              let hName = hdrs[j] || '';
+              // strip suffixes for print
+              if (hName.endsWith('_NR21') || hName.endsWith('_NR26') || hName.endsWith('_NR700')) {
+                hName = hName.split('_NR')[0];
+              }
+              mat[1][colStart + j] = hName;
+            }
+
+            // Special: if this is NRDCDPR, put labels and indices on row 1
+            if (section.title === 'NOKLTE:NRDCDPR') {
+              const mt = section.maxTriplets || 0;
+              const bfc = section.baseFixedCount || 13;
+              
+              if (section.nrLabels) {
+                 for (let k in section.nrLabels) {
+                    let pos = colStart + parseInt(k);
+                    if (pos >= 0 && pos < totalCols) mat[0][pos] = section.nrLabels[k];
+                 }
+              }
+
+              for (let n = 1; n <= mt; n++) {
+                const pos = colStart + bfc + (n - 1) * 3 + 1;
+                if (pos >= 0 && pos < totalCols) {
+                  mat[0][pos] = String(n); // put index on row 1 for lcrId column
+                }
+              }
+            }
+
+            // data rows from index 2..(2+maxDataRows-1)
+            const srcRows = Array.isArray(section.rows) ? section.rows : [];
+            for (let r = 0; r < maxDataRows; r++) {
+              const src = srcRows[r] || {};
+              for (let j = 0; j < hlen; j++) {
+                const key = hdrs[j]; // repeated headers may be 'lcrId','method','actB1NrBeamMeas' for NRDCDPR
+                let v = '';
+
+                // For NRDCDPR dynamic fields we stored properties with index suffixes (like lcrId#n)
+                if (section.title === 'NOKLTE:NRDCDPR') {
+                  const bfc = section.baseFixedCount || 13;
+                  const relativeIdx = j - bfc; // <0 for fixed area
+                  if (relativeIdx >= 0) {
+                    const tripletIndex = Math.floor(relativeIdx / 3) + 1; // 1-based n
+                    const tripletPos = relativeIdx % 3; // 0 -> actB1NrBeamMeas, 1 -> lcrId, 2 -> method
+                    // map to property names we created in NOKLTE_NRDCDPR rows:
+                    let propName;
+                    if (tripletPos === 0) propName = `actB1NrBeamMeas#${tripletIndex}`;
+                    else if (tripletPos === 1) propName = `lcrId#${tripletIndex}`;
+                    else propName = `method#${tripletIndex}`;
+                    if (src && (propName in src)) v = src[propName];
+                    else v = '';
+                    mat[2 + r][colStart + j] = (v === null || v === undefined) ? '' : String(v);
+                    continue; // move to next header cell
+                  }
+
+                }
+
+                // Non-NRDCDPR or fixed columns: try exact key, $-stripped, or case-insensitive
+                if (src && (key in src)) {
+                  v = src[key];
+                } else if (src && String(key).startsWith('$') && (key.slice(1) in src)) {
+                  v = src[key.slice(1)];
+                } else {
+                  // case-insensitive lookup
+                  for (const k2 of Object.keys(src || {})) {
+                    if (k2 && k2.toLowerCase() === String(key).toLowerCase()) { v = src[k2]; break; }
+                  }
+                }
+                mat[2 + r][colStart + j] = (v === null || v === undefined) ? '' : String(v);
+              }
+            }
+
+            colStart += hlen;
+          });
+
+          // CSV escaping
+          function csvEscape(cell) {
+            if (cell === null || cell === undefined) cell = '';
+            cell = String(cell);
+            if (cell.indexOf('"') !== -1) cell = cell.replace(/"/g, '""');
+            if (cell.indexOf(',') !== -1 || cell.indexOf('\n') !== -1 || cell.indexOf('\r') !== -1 || cell.indexOf('"') !== -1) {
+              return `"${cell}"`;
+            }
+            return cell;
+          }
+
+          const csvLines = mat.map(row => row.map(csvEscape).join(','));
+          const csvText = csvLines.join('\r\n');
+
+          // store for debugging / other usage
+          window._NCR_COMBINED_CSV = csvText;
+
+          const btn = document.getElementById('downloadBtn');
+          if (btn) {
+            btn.disabled = false;
+            
+            // Auto-trigger download
+            setTimeout(() => { btn.click(); }, 300);
+
+            // 1) short beep using Web Audio API
+            (function beep(duration = 150, frequency = 880, volume = 0.05) {
+              try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) throw new Error('No AudioContext');
+                const ctx = new Ctx();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = frequency;
+                gain.gain.value = volume;
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                setTimeout(() => {
+                  osc.stop();
+                  // close AudioContext to free resources (some browsers may warn)
+                  if (ctx.close) ctx.close();
+                }, duration);
+              } catch (err) {
+                // fail silently if browser blocks audio (autoplay/user gesture) or unsupported
+                console.warn('beep failed:', err);
+              }
+            })();
+
+            
+
+
+            // 3) original completion log
+            logArea.textContent += '\n';
+            appendLog(`DONE Rows=${totalRows}, Cols=${totalCols}`);
+          } else {
+            appendLog('WARN: #downloadBtn not found. Combined CSV prepared and stored at window._NCR_COMBINED_CSV but not attached to any button.');
+          }
+
+
+        })();
+
+        // --- end of build combined CSV block ---
+
+
+
+        // appendLog('INFO: Process completed successfully.');
+      } catch (err) {
+        appendLog('ERROR: ' + (err && err.message ? err.message : String(err)));
+        console.error(err);
+      }
+    }
+
+    if(processDefaultBtn) processDefaultBtn.addEventListener('click', () => runProcess('default'));
+    if(processRefarmingBtn) processRefarmingBtn.addEventListener('click', () => runProcess('refarming'));
+    if(processCoverageBtn) processCoverageBtn.addEventListener('click', () => runProcess('coverage'));
+    // ----------------- END REPLACEMENT -----------------
+
+
+    // Replace any existing addEventListener for downloadBtn with this single handler
+    // This uses window._NCR_COMBINED_CSV as primary CSV source, with fallbacks.
+    const downloadHandler = function () {
+      // prefer the combined csv stored by builder
+      let data = '';
+      if (typeof window._NCR_COMBINED_CSV === 'string' && window._NCR_COMBINED_CSV.length > 0) {
+        data = window._NCR_COMBINED_CSV;
+      }
+
+      if (!data) {
+        alert('No CSV data available for download.');
+        return;
+      }
+
+      // determine filename from #outname (supports input/value or element text)
+      var outnameEl = document.getElementById('outname');
+      var base = 'endc_export';
+      if (outnameEl) {
+        if (typeof outnameEl.value !== 'undefined' && outnameEl.value !== '') {
+          base = outnameEl.value;
+        } else if ((outnameEl.textContent || outnameEl.innerText || '') !== '') {
+          base = outnameEl.textContent || outnameEl.innerText;
+        }
+      }
+      base = String(base).trim();
+      if (base === '') base = 'endc_export';
+      base = base.replace(/[\\\/:*?"<>|]/g, '_');
+      var lower = base.toLowerCase();
+      if (lower.slice(-4) !== '.csv') base += '.csv';
+
+      // add BOM for Excel and create blob
+      var content = '\uFEFF' + data;
+      var blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+
+      // IE10+ fallback
+      if (navigator.msSaveBlob) {
+        navigator.msSaveBlob(blob, base);
+        return;
+      }
+
+      // standard download
+      var link = document.createElement('a');
+      var url = URL.createObjectURL(blob);
+      link.href = url;
+      link.setAttribute('download', base);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    };
+
+    // attach single handler safely: remove other handlers by replacing onclick
+    if (downloadBtn) {
+      // remove all existing event listeners by replacing onclick (simple and effective)
+      downloadBtn.onclick = downloadHandler;
+      // ensure button is enabled
+      downloadBtn.disabled = false;
+    } else {
+      console.warn('downloadBtn element not found. CSV prepared at window._NCR_COMBINED_CSV if available.');
+    }
+
+
+
+    // init
+    updateControls();
+    // logArea.textContent = (new Date()).toISOString() + ' INFO: Ready';
+    logArea.textContent = ' INFO: Ready';
+    logArea.style.display = 'block';
+
+
+    // Button color behavior manager
+    document.addEventListener('DOMContentLoaded', function () {
+      const processDefaultBtn = document.getElementById('processDefaultBtn');
+      const processRefarmingBtn = document.getElementById('processRefarmingBtn');
+      const processCoverageBtn = document.getElementById('processCoverageBtn');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const importPasteBtn = document.getElementById('importPasteBtn');
+      const clearSheetBtn = document.getElementById('clearSheetBtn');
+
+      if (!importPasteBtn) return;
+
+      function readVisual(el) {
+        const cs = getComputedStyle(el);
+        return {
+          backgroundColor: cs.backgroundColor,
+          color: cs.color,
+          borderColor: cs.borderColor,
+          boxShadow: cs.boxShadow
+        };
+      }
+
+      function applyVisual(el, v) {
+        if (!el || !v) return;
+        if (v.backgroundColor) el.style.backgroundColor = v.backgroundColor;
+        if (v.color) el.style.color = v.color;
+        if (v.borderColor) el.style.borderColor = v.borderColor;
+        if (v.boxShadow) el.style.boxShadow = v.boxShadow;
+      }
+
+      // Use importPasteBtn to capture solid blue, and downloadBtn for light blue
+      const colorSolid = readVisual(importPasteBtn);
+      const colorGhost = downloadBtn ? readVisual(downloadBtn) : null;
+
+      function setInitialState() {
+        // Keep importPasteBtn solid blue
+        applyVisual(importPasteBtn, colorSolid);
+        
+        // Ensure all process buttons rely purely on the light blue .ghost CSS class
+        [processDefaultBtn, processRefarmingBtn, processCoverageBtn].forEach(btn => {
+          if (btn) {
+            btn.classList.add('ghost');
+            btn.style.backgroundColor = '';
+            btn.style.color = '';
+            btn.style.border = '';
+            btn.style.borderColor = '';
+            btn.style.boxShadow = '';
+          }
+        });
+      }
+
+      setInitialState();
+
+      importPasteBtn.addEventListener('click', function () {
+        if (colorGhost) applyVisual(importPasteBtn, colorGhost);
+      });
+
+      if (clearSheetBtn) {
+        clearSheetBtn.addEventListener('click', function () {
+          setInitialState();
+        });
+      }
+    });
+
+    //log area window
+    (function () {
+      document.addEventListener('DOMContentLoaded', () => {
+        const logArea = document.getElementById('logArea');
+        if (!logArea) {
+          console.warn('logArea not found');
+          return;
+        }
+
+        let overlay = null;
+        let modal = null;
+        let modalContent = null;
+        let originalParent = null;
+        let originalNextSibling = null;
+        let originalInlineStyle = '';
+
+        function openModal() {
+          if (overlay) return; // already open — do nothing
+
+          // remember where to put it back
+          originalParent = logArea.parentNode;
+          originalNextSibling = logArea.nextSibling; // may be null
+          originalInlineStyle = logArea.getAttribute('style') || '';
+
+          // create overlay
+          overlay = document.createElement('div');
+          overlay.id = 'logModalOverlay';
+          Object.assign(overlay.style, {
+            position: 'fixed',
+            inset: '0',
+            backgroundColor: 'rgba(0,0,0,0.45)',
+            zIndex: '2147483646',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            WebkitOverflowScrolling: 'touch'
+          });
+
+          // create modal container (flex column)
+          modal = document.createElement('div');
+          modal.id = 'logModal';
+          Object.assign(modal.style, {
+            width: '75vw',
+            height: '75vh',
+            maxWidth: 'calc(100vw - 40px)',
+            maxHeight: 'calc(100vh - 40px)',
+            background: '#ffffff',
+            borderRadius: '8px',
+            boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
+            overflow: 'hidden', // let inner content scroll
+            zIndex: '2147483647',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+          });
+
+          // content wrapper inside modal to hold the real logArea
+          modalContent = document.createElement('div');
+          modalContent.id = 'logModalContent';
+          Object.assign(modalContent.style, {
+            flex: '1 1 auto',
+            minHeight: '0',        // important for proper flex child scrolling
+            overflow: 'hidden',    // logArea will handle its own scrolling
+            padding: '12px',
+            boxSizing: 'border-box'
+          });
+
+          // ensure clicks inside modalContent do not close the overlay
+          modalContent.addEventListener('click', (e) => e.stopPropagation());
+
+          // Move the real logArea into the modalContent
+          modal.appendChild(modalContent);
+          modalContent.appendChild(logArea);
+
+          // Ensure logArea fills modalContent and is scrollable and close to modal height
+          Object.assign(logArea.style, {
+            width: '100%',
+            height: '97%',
+            minHeight: '0',      // allow flex to size it correctly
+            boxSizing: 'border-box',
+            overflow: 'auto',
+            display: 'block'
+          });
+
+          // clicking overlay (outside modal) closes it
+          overlay.addEventListener('click', onOverlayClick);
+          // pressing Escape closes
+          window.addEventListener('keydown', onKeyDown);
+
+          // add to document
+          document.body.appendChild(overlay);
+          document.body.appendChild(modal); // append modal to body (modal contains modalContent -> logArea)
+          // actually put overlay behind modal visually by placing overlay first, then modal on top
+          overlay.appendChild(modal); // move modal into overlay (keeps DOM tidy)
+
+          // prevent body scroll while modal open
+          document.documentElement.style.overflow = 'hidden';
+          document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+          if (!overlay) return;
+
+          overlay.removeEventListener('click', onOverlayClick);
+          window.removeEventListener('keydown', onKeyDown);
+
+          // restore logArea to original position
+          if (originalParent) {
+            if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
+              originalParent.insertBefore(logArea, originalNextSibling);
+            } else {
+              originalParent.appendChild(logArea);
+            }
+          }
+
+          // restore inline style
+          if (originalInlineStyle === '') logArea.removeAttribute('style');
+          else logArea.setAttribute('style', originalInlineStyle);
+
+          // clean DOM
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+
+          // reset variables
+          overlay = null;
+          modal = null;
+          modalContent = null;
+          originalParent = null;
+          originalNextSibling = null;
+          originalInlineStyle = '';
+
+          // restore body scroll
+          document.documentElement.style.overflow = '';
+          document.body.style.overflow = '';
+        }
+
+        function onOverlayClick(/*e*/) {
+          closeModal();
+        }
+
+        function onKeyDown(e) {
+          if (e.key === 'Escape' || e.key === 'Esc') {
+            closeModal();
+          }
+        }
+
+        // Click handler: open modal only if not already open.
+        // Also ignore clicks on interactive elements inside logArea (links/buttons/inputs).
+        logArea.addEventListener('click', function (e) {
+          // If overlay exists modal is already open; do nothing.
+          if (overlay) return;
+
+          const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+          if (tag === 'a' || tag === 'button' || tag === 'input' || tag === 'textarea') return;
+
+          openModal();
+        });
+
+        // Optional: close on Escape when focus is within logArea (also handled globally)
+        // No further actions needed.
+      });
+    })();
+
+
+
   </script>
-  
+
+
+
+  <script>
+
+    (function () {
+      // element refs (must match your IDs)
+      const fL = document.getElementById('fileLNCEL');
+      const fI = document.getElementById('fileIRFIM');
+      const fH = document.getElementById('fileLNHOIF');
+      const fA = document.getElementById('fileLNADJGNB');
+      const outname = document.getElementById('outname');
+      const sheet = document.getElementById('sheetTable'); // container for pasted rows
+      const logArea = document.getElementById('logArea');
+
+      function log(msg) {
+        try {
+          if (logArea) {
+            // const ts = new Date().toISOString();
+            logArea.style.display = 'block';
+            // logArea.textContent += (logArea.textContent ? '\n' : '') + ts + ' ' + msg;
+            logArea.textContent += (logArea.textContent ? '\n' : '') + ' ' + msg;
+            logArea.scrollTop = logArea.scrollHeight;
+          } else {
+            console.log('[DBG]', msg);
+          }
+        } catch (e) { }
+      }
+
+      // persistors
+      function saveState() {
+        try {
+          localStorage.setItem('endc_last_sheet_html', sheet ? sheet.innerHTML : '');
+          localStorage.setItem('endc_last_outname', outname ? outname.value : '');
+          localStorage.setItem('endc_last_file_LNCEL', fL && fL.files.length ? fL.files[0].name : (localStorage.getItem('endc_last_file_LNCEL') || ''));
+          localStorage.setItem('endc_last_file_IRFIM', fI && fI.files.length ? fI.files[0].name : (localStorage.getItem('endc_last_file_IRFIM') || ''));
+          localStorage.setItem('endc_last_file_LNHOIF', fH && fH.files.length ? fH.files[0].name : (localStorage.getItem('endc_last_file_LNHOIF') || ''));
+          localStorage.setItem('endc_last_file_LNADJGNB', fA && fA.files.length ? fA.files[0].name : (localStorage.getItem('endc_last_file_LNADJGNB') || ''));
+          // log('DEBUG: saved last state to localStorage');
+        } catch (e) { console.warn(e); }
+      }
+
+      // bind saving
+      if (outname) outname.addEventListener('input', saveState);
+      if (sheet) {
+        // if the UI has paste handlers, attach a capture after paste or on mutation
+        sheet.addEventListener('input', saveState); // if editable
+        // MutationObserver fallback to catch dynamic table fill
+        const mo = new MutationObserver(saveState);
+        mo.observe(sheet, { subtree: true, childList: true, characterData: true });
+      }
+      [fL, fI, fH, fA].forEach(fi => { if (fi) fi.addEventListener('change', saveState); });
+
+      // attempt to prepopulate simple fields
+      window.addEventListener('load', async () => {
+        try {
+          const urlParams = new URLSearchParams(location.search);
+          const devMode = urlParams.has('dev') || localStorage.getItem('debugAutoLoad') === '1';
+
+          const prevHtml = localStorage.getItem('endc_last_sheet_html');
+          const prevOut = localStorage.getItem('endc_last_outname');
+
+          if (prevOut && outname) { outname.value = prevOut; log('DEBUG: outname restored'); }
+          // if (prevHtml && sheet) { sheet.innerHTML = prevHtml; log('DEBUG: sheet restored from localStorage'); }
+
+          if (!devMode) {
+            // log('DEBUG: devMode disabled — not attempting to auto-load files.');
+            return;
+          }
+
+          // filenames saved previously (only names — must exist in /debug_inputs/)
+          const fnL = localStorage.getItem('endc_last_file_LNCEL');
+          const fnI = localStorage.getItem('endc_last_file_IRFIM');
+          const fnH = localStorage.getItem('endc_last_file_LNHOIF');
+          const fnA = localStorage.getItem('endc_last_file_LNADJGNB');
+
+          const filesToTry = [
+            { input: fL, name: fnL },
+            { input: fI, name: fnI },
+            { input: fH, name: fnH },
+            { input: fA, name: fnA },
+          ];
+
+          // helper - fetch file and assign to input
+          async function fetchAndAssign(inputEl, filename) {
+            if (!inputEl || !filename) return false;
+            try {
+              // log('DEBUG: attempting fetch /debug_inputs/' + filename);
+              const resp = await fetch('/debug_inputs/' + encodeURIComponent(filename), { cache: 'no-store' });
+              if (!resp.ok) throw new Error('HTTP ' + resp.status);
+              const blob = await resp.blob();
+              // create File and assign via DataTransfer
+              const fileObj = new File([blob], filename, { type: blob.type || 'application/octet-stream' });
+              const dt = new DataTransfer();
+              dt.items.add(fileObj);
+              inputEl.files = dt.files;
+              // log('DEBUG: assigned file ' + filename + ' to input ' + (inputEl.id || 'file-input'));
+              return true;
+            } catch (err) {
+              // log('WARN: failed to auto-load ' + filename + ' (' + err.message + ')');
+              return false;
+            }
+          }
+
+          // try all
+          for (const item of filesToTry) {
+            if (item.name) await fetchAndAssign(item.input, item.name);
+          }
+
+          log('DEBUG: auto-load attempt finished.');
+        } catch (err) {
+          console.error(err);
+          log('ERROR: auto-load process error: ' + (err && err.message ? err.message : String(err)));
+        }
+      });
+
+      // allow user to toggle persistence easily (optional)
+      window.endcDebugHelpers = {
+        enableAutoLoad: () => { localStorage.setItem('debugAutoLoad', '1'); log('debugAutoLoad=1'); },
+        disableAutoLoad: () => { localStorage.removeItem('debugAutoLoad'); log('debugAutoLoad cleared'); },
+        clearSavedState: () => {
+          ['endc_last_sheet_html', 'endc_last_outname', 'endc_last_file_LNCEL', 'endc_last_file_IRFIM', 'endc_last_file_LNHOIF', 'endc_last_file_LNADJGNB'].forEach(k => localStorage.removeItem(k));
+          log('cleared saved debug state');
+        }
+      };
+    })();
+
+
+
+    // Prefill textarea only when ?dev=1
+    const isDev = new URLSearchParams(location.search).has('dev');
+    if (isDev) {
+      const ta = document.querySelector('textarea');
+      if (ta && !ta.value.trim()) {
+        ta.value = `600730\t16SBY0410\t16SBY0458\t1011008\t100.86.34.254
+    600732\t16SBY0446\t16SBY0458\t1011008\t100.86.34.254
+    600725\t16SBY0424\t16SBY0458\t1011008\t100.86.34.254
+    601271\t16SBY0503_IBS\t16SBY0478\t1010988\t100.86.35.108
+    600737\t16SBY0442\t16SBY0478\t1010988\t100.86.35.108
+    600732\t16SBY0446\t16SBY0478\t1010988\t100.86.35.108
+    601377\t16SBY0654\t16SBY0496\t1010997\t100.86.35.60
+    600587\t16SBY0532\t16SBY0496\t1010997\t100.86.35.60
+    600584\t16SBY0520\t16SBY0496\t1010997\t100.86.35.60
+    600574\t16SBY0539\t16SBY0534\t1010994\t100.86.33.110
+    601271\t16SBY0503_IBS\t16SBY0534\t1010994\t100.86.33.110
+    600596\t16SBY0566\t16SBY0534\t1010994\t100.86.33.110
+    600600\t16SBY0565\t16SBY0534\t1010994\t100.86.33.110
+    600612\t16SBY0575\t16SBY0534\t1010994\t100.86.33.110
+    601271\t16SBY0503_IBS\t16SBY0492\t1010995\t100.86.34.58
+    600744\t16SBY0440\t16SBY0494\t1011118\t100.86.34.110
+    600574\t16SBY0539\t16SBY0507\t1010987\t100.86.34.170
+    601377\t16SBY0654\t16SBY0507\t1010987\t100.86.34.170
+    601271\t16SBY0503_IBS\t16SBY0507\t1010987\t100.86.34.170
+    600587\t16SBY0532\t16SBY0507\t1010987\t100.86.34.170
+    601377\t16SBY0654\t16SBY0483\t1011009\t100.86.34.144
+    600730\t16SBY0410\t16SBY0447\t1010911\t100.86.33.180
+    600502\t16SDA0390\t16SBY0447\t1010911\t100.86.33.180
+    600725\t16SBY0424\t16SBY0447\t1010911\t100.86.33.180
+    600728\t16SBY0407\t16SBY0447\t1010911\t100.86.33.180
+    600725\t16SBY0424\t16SBY0464\t1011131\t100.86.34.82
+    600732\t16SBY0446\t16SBY0464\t1011131\t100.86.34.82
+    600737\t16SBY0442\t16SBY0464\t1011131\t100.86.34.82
+    600600\t16SBY0565\t16SBY0577\t1011005\t100.86.33.158
+    600612\t16SBY0575\t16SBY0577\t1011005\t100.86.33.158
+    600612\t16SBY0575\t16SBY0595\t1010990\t100.86.32.84
+    600611\t16SBY0615\t16SBY0595\t1010990\t100.86.32.84
+    600538\t16SBY0437\t16SBY0503\t1011446\t100.86.32.168
+    600525\t16SBY0479\t16SBY0503\t1011446\t100.86.32.168
+    600499\t16SDA0397\t16SBY0482\t1010914\t100.86.34.108
+    600494\t16SDA0408\t16SBY0482\t1010914\t100.86.34.108`;
+      }
+    }
+
+
+  </script>
+
+
 </body>
+
 </html>
