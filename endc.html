@@ -3,7 +3,7 @@
 
 <head>
   <script>
-  const APP_VERSION = "endc3h 261120"; // Type manually here
+  const APP_VERSION = "endc3h 261120 2"; // Type manually here
   </script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -1449,7 +1449,7 @@
         }
 		
         // ------------------ NOKLTE_MODPR ------------------
-        function NOKLTE_MODPR(uLNBTSarr, profile) {
+        function NOKLTE_MODPR(uLNBTSarr, profile, siteEarfcnMap = {}) {
           // returns { headers, rows }
           // Headers/values follow the exact sequence you provided (cols 2..16)
           const headers = [
@@ -1457,10 +1457,10 @@
             'autoAdapt', 'autoAdaptIMLB', 'caBlockingAllowed', 'configUeCapEndcHoRetry',
             'enDcBlockingAllowed', 'idleLBPercCaUe', 'idleLBPercentageOfUes', 'idleLBPercUeTM9',
             'targetSelMethod',
-            'freqLayer', 'preference', 'freqLayer2', 'preference2', 'freqLayer3', 'preference3', 'freqLayer4', 'preference4', 'freqLayer5', 'preference5'
+            'freqLayer', 'preference', 'freqLayer2', 'preference2', 'freqLayer3', 'preference3', 'freqLayer4', 'preference4', 'freqLayer5', 'preference5', 'freqLayer6', 'preference6'
           ];
           // According to your comment values for cols 2..16:
-          const values = ['0', '0', '0', '0', '0', '0', '100', '0', '0', '1625', '1', '1475', '1', '3652', '1', '', '', '', ''];
+          const values = ['0', '0', '0', '0', '0', '0', '100', '0', '0', '1625', '1', '1475', '1', '3652', '1', '', '', '', '', '', ''];
           
           if (profile === 'coverage') {
             values[15] = '200'; // freqLayer4
@@ -1477,6 +1477,11 @@
             // apply values to headers 1.. (headers[1]..headers[16])
             for (let i = 1; i < headers.length; i++) {
               r[headers[i]] = (values[i - 1] !== undefined) ? String(values[i - 1]) : '';
+            }
+            const siteEars = siteEarfcnMap[String(l).trim()];
+            if (siteEars && siteEars.has('9150')) {
+              r['freqLayer6'] = '9150';
+              r['preference6'] = '1';
             }
             rows.push(r);
           }
@@ -1543,7 +1548,7 @@
         const { headers: lnrelgnbHeaders, rows: lnrelgnbRows } = NOKLTE_LNRELGNBCELL(uLNBTSarr);
         const { headers: caimHeaders, rows: caimRows } = NOKLTE_CAIMLBP(uLNBTSarr, profile, siteEarfcnMap);
         const { headers: imlHeaders, rows: imlRows } = NOKLTE_IMLBNR(uLNBTSarr, profile, siteEarfcnMap);
-        const { headers: modprHeaders, rows: modprRows } = NOKLTE_MODPR(uLNBTSarr, profile);
+        const { headers: modprHeaders, rows: modprRows } = NOKLTE_MODPR(uLNBTSarr, profile, siteEarfcnMap);
         const { headers: anrHeaders, rows: anrRows } = NOKLTE_ANR(uLNBTSarr);
 
 
