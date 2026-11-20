@@ -3,7 +3,7 @@
 
 <head>
   <script>
-  const APP_VERSION = "endc3h 261120 3"; // Type manually here
+  const APP_VERSION = "endc3g 260919"; // Type manually here
   </script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -591,7 +591,7 @@
     // If there are fewer values than outCols-1, remaining will be filled with ''.
 
     const providedDefaults = [
-      '0','1','1','1','0','1','1','1','1', '0', '2', '1', '0', '1', '2', '2', '0', '', '1', '', '1', '3', '1', '1', '1001', '10', '3', '3', '3', '300', '700', '35', '0', '0', '1', '1001', '1', '1001', '1', '1001', '1', '1001', '500', '2000'
+      '0','1','1','1','0','1','1','1','1', '0', '2', '1', '0', '1', '4', '4', '0', '', '1', '', '1', '3', '1', '1', '1001', '10', '3', '3', '3', '300', '700', '35', '0', '0', '1', '1001', '1', '1001', '1', '1001', '1', '1001', '500', '2000'
     ];
 
     // build map from column name -> default value (safer than index shifts)
@@ -899,7 +899,7 @@
           const rows = [];
           if (!src.length) return { headers, rows };
 
-          const allowed = new Set(['3652', '1625', '1475', '9150']);
+          const allowed = new Set(['3652', '1625', '1475']);
           if (profile === 'coverage') {
             allowed.add('75');
             allowed.add('200');
@@ -918,7 +918,6 @@
               else if (frq === '1475') w = '50';
               else if (frq === '75') w = '100';
               else if (frq === '200') w = '50';
-              else if (frq === '9150') w = '100';
               else w = '';
             }
             if (p === undefined || p === null || String(p).trim() === '') {
@@ -927,7 +926,6 @@
               else if (frq === '1475') p = '25';
               else if (frq === '75') p = '30';
               else if (frq === '200') p = '25';
-              else if (frq === '9150') p = '30';
               else p = '';
             }
 
@@ -961,8 +959,8 @@
           // normalize uLNBTSarr to strings + set for quick lookup
           const allowedMRs = new Set((uLNBTSarr || []).map(x => String(x).trim()));
 
-          const allowedEar = new Set(['3652', '1625', '1475', '75', '200', '9150']);
-          const allowedEar2 = new Set(['3652', '1625', '1475', '9150']);
+          const allowedEar = new Set(['3652', '1625', '1475', '75', '200']);
+          const allowedEar2 = new Set(['3652', '1625', '1475']);
           if (profile === 'coverage') {
             allowedEar2.add('75');
             allowedEar2.add('200');
@@ -990,7 +988,6 @@
               else if (ear === '1475') w = '50';
               else if (ear === '75') w = '100';
               else if (ear === '200') w = '50';
-              else if (ear === '9150') w = '100';
               else w = '';
             }
             if (p === undefined || p === null || String(p).trim() === '' || String(p).trim() === '\\N'  || String(p).trim() === '\N') {
@@ -999,7 +996,6 @@
               else if (ear === '1475') p = '25';
               else if (ear === '75') p = '30';
               else if (ear === '200') p = '25';
-              else if (ear === '9150') p = '30';
               else p = '';
             }
 
@@ -1041,18 +1037,18 @@
             'ssbPeriodicity', 'ssbSubcarrierSpacing', 'freqBandIndicatorNr', 'priority'
           ];
           const values = [
-        /*$dn handled separately*/ '0', '0', '3600000', '66', '256', '0', '423410', '0', '2', '2', '6', '980', '10', '10000', '0', '3', '0', '2', '15', '1', '0'
+        /*$dn handled separately*/ '0', '0', '3600000', '66', '256', '0', '423410', '0', '2', '2', '8', '980', '10', '10000', '0', '3', '0', '2', '15', '1', '0'
           ];
           
           if (profile === 'refarming' || profile === 'coverage') {
-            values[6] = '157690'; // carrierFreqNrCell
-			values[18] = '15';    // ssbSubcarrierSpacing
-            values[19] = '28';    // freqBandIndicatorNr
+            values[6] = '531870'; // carrierFreqNrCell
+			values[18] = '30';    // ssbSubcarrierSpacing
+            values[19] = '41';    // freqBandIndicatorNr
           }
           const rows = [];
           for (const l of uLNBTSarr) {
             const r = {};
-            r['$dn'] = `PLMN-PLMN/MRBTS-${l}/LNBTS-${l}/NRDCDPR-0/ENDCDMEASCONF-3`;
+            r['$dn'] = `PLMN-PLMN/MRBTS-${l}/LNBTS-${l}/NRDCDPR-0/ENDCDMEASCONF-0`;
             for (let i = 1; i < headers.length; i++) {
               r[headers[i]] = values[i - 1] !== undefined ? values[i - 1] : '';
             }
@@ -1092,19 +1088,19 @@
           if (profile === 'refarming' || profile === 'coverage') {
             baseFixedHeaders = [
               '$dn',
+              'carrierCenterFreqNr_NR21','chBwDlNrCell_NR21','ssbFreqNrCell_NR21',
               'carrierCenterFreqNr_NR26','chBwDlNrCell_NR26','ssbFreqNrCell_NR26',
               'carrierCenterFreqNr_NR700','chBwDlNrCell_NR700','ssbFreqNrCell_NR700',
-              'carrierCenterFreqNr_NR21','chBwDlNrCell_NR21','ssbFreqNrCell_NR21',
               'actSortBcListEnDc', 'allowedBcSelectMethod', 'bufTrigForB1Nr', 'dlPathlossChg', 'enDCpMaxEUTRApowerOffset',
               'enDCpMaxNRpowerOffset', 'tPeriodicPhr', 'tProhibitPhr', 'cAggrLteNrDcCellList'
             ];
             baseValues = [
+              '', '', '',
               '532002', '60', '531870',
-              '157600', '10', '157690',
               '', '', '',
               '1', '2', '0', '1', '0', '0', '20', '0', '-1'
             ];
-            nrLabels = { 1: 'NR26', 2: 'NR26', 3: 'NR26', 4: 'NR700', 5: 'NR700', 6: 'NR700', 7: 'NR21', 8: 'NR21', 9: 'NR21' };
+            nrLabels = { 1: 'NR21', 2: 'NR21', 3: 'NR21', 4: 'NR26', 5: 'NR26', 6: 'NR26', 7: 'NR700', 8: 'NR700', 9: 'NR700' };
           } else {
             baseFixedHeaders = [
               '$dn','carrierCenterFreqNr','chBwDlNrCell','ssbFreqNrCell', 'actSortBcListEnDc', 'allowedBcSelectMethod', 'bufTrigForB1Nr', 'dlPathlossChg', 'enDCpMaxEUTRApowerOffset',
@@ -1402,12 +1398,11 @@
           const rows = [];
 
           for (const l of (uLNBTSarr || [])) {
-            const siteEars = siteEarfcnMap[String(l).trim()] || new Set();
-            const earMap = [1625, 1475, 3652]; // base mapping (indices 0..2)
-            if (siteEars.has('9150')) earMap.push(9150); // index 3 only if 9150 exists in MRBTS
+            const earMap = [1625, 1475, 3652]; // base mapping
             if (profile === 'coverage') {
-              if (siteEars.has('200')) earMap.push(200);
-              if (siteEars.has('75')) earMap.push(75);
+              const siteEars = siteEarfcnMap[l] || new Set();
+              if (siteEars.has('200')) earMap.push(200); // index 3 if exists
+              if (siteEars.has('75')) earMap.push(75);   // index 4 if exists
             }
             
             for (let idx = 0; idx < earMap.length; idx++) {
@@ -1429,19 +1424,18 @@
           const rows = [];
 
           for (const l of (uLNBTSarr || [])) {
-            const siteEars = siteEarfcnMap[String(l).trim()] || new Set();
             let maxIdx = 3;
-            if (siteEars.has('9150')) maxIdx++;
             if (profile === 'coverage') {
+              const siteEars = siteEarfcnMap[l] || new Set();
               if (siteEars.has('200')) maxIdx++;
               if (siteEars.has('75')) maxIdx++;
             }
             
             for (let idx = 0; idx < maxIdx; idx++) {
               const r = {};
-              r['$dn'] = `PLMN-PLMN/MRBTS-${l}/LNBTS-${l}/CAGENB-0/CAIMLBP-${idx}/IMLBNR-2`;
+              r['$dn'] = `PLMN-PLMN/MRBTS-${l}/LNBTS-${l}/CAGENB-0/CAIMLBP-${idx}/IMLBNR-1`;
               r['b1NrRequired'] = '0';
-              r['band'] = '28';
+              r['band'] = '41';
               rows.push(r);
             }
           }
@@ -1451,7 +1445,7 @@
         }
 		
         // ------------------ NOKLTE_MODPR ------------------
-        function NOKLTE_MODPR(uLNBTSarr, profile, siteEarfcnMap = {}) {
+        function NOKLTE_MODPR(uLNBTSarr, profile) {
           // returns { headers, rows }
           // Headers/values follow the exact sequence you provided (cols 2..16)
           const headers = [
@@ -1459,10 +1453,10 @@
             'autoAdapt', 'autoAdaptIMLB', 'caBlockingAllowed', 'configUeCapEndcHoRetry',
             'enDcBlockingAllowed', 'idleLBPercCaUe', 'idleLBPercentageOfUes', 'idleLBPercUeTM9',
             'targetSelMethod',
-            'freqLayer', 'preference', 'freqLayer2', 'preference2', 'freqLayer3', 'preference3', 'freqLayer4', 'preference4', 'freqLayer5', 'preference5', 'freqLayer6', 'preference6'
+            'freqLayer', 'preference', 'freqLayer2', 'preference2', 'freqLayer3', 'preference3', 'freqLayer4', 'preference4', 'freqLayer5', 'preference5'
           ];
           // According to your comment values for cols 2..16:
-          const values = ['0', '0', '0', '0', '0', '0', '100', '0', '0', '1625', '1', '1475', '1', '3652', '1', '', '', '', '', '', ''];
+          const values = ['0', '0', '0', '0', '0', '0', '100', '0', '0', '1625', '1', '1475', '1', '3652', '1', '', '', '', ''];
           
           if (profile === 'coverage') {
             values[15] = '200'; // freqLayer4
@@ -1479,11 +1473,6 @@
             // apply values to headers 1.. (headers[1]..headers[16])
             for (let i = 1; i < headers.length; i++) {
               r[headers[i]] = (values[i - 1] !== undefined) ? String(values[i - 1]) : '';
-            }
-            const siteEars = siteEarfcnMap[String(l).trim()];
-            if (siteEars && siteEars.has('9150')) {
-              r['freqLayer6'] = '9150';
-              r['preference6'] = '1';
             }
             rows.push(r);
           }
@@ -1550,7 +1539,7 @@
         const { headers: lnrelgnbHeaders, rows: lnrelgnbRows } = NOKLTE_LNRELGNBCELL(uLNBTSarr);
         const { headers: caimHeaders, rows: caimRows } = NOKLTE_CAIMLBP(uLNBTSarr, profile, siteEarfcnMap);
         const { headers: imlHeaders, rows: imlRows } = NOKLTE_IMLBNR(uLNBTSarr, profile, siteEarfcnMap);
-        const { headers: modprHeaders, rows: modprRows } = NOKLTE_MODPR(uLNBTSarr, profile, siteEarfcnMap);
+        const { headers: modprHeaders, rows: modprRows } = NOKLTE_MODPR(uLNBTSarr, profile);
         const { headers: anrHeaders, rows: anrRows } = NOKLTE_ANR(uLNBTSarr);
 
 
